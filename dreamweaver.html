@@ -435,10 +435,14 @@
             };
             
             const volControl = document.getElementById('music-vol');
-            state.music.volume = validateVolume(volControl.value);
-            volControl.addEventListener('input', (e) => {
-                state.music.volume = validateVolume(e.target.value);
-            });
+            if (volControl) {
+                state.music.volume = validateVolume(volControl.value);
+                volControl.addEventListener('input', (e) => {
+                    state.music.volume = validateVolume(e.target.value);
+                });
+            } else {
+                state.music.volume = DEFAULT_VOLUME;
+            }
         };
     </script>
 </body>
