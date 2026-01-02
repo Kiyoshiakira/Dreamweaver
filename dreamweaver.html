@@ -173,6 +173,8 @@
     <script>
         const apiKey = "";
         const DEFAULT_ACCENT = 'American';
+        const MUSIC_SELECTION_MIN_SCORE = 2; // Minimum keyword matches for intelligent music selection
+        const IMAGE_QUEUE_DELAY_MS = 1000; // Delay between background image generations to avoid API overload
         const VOICES = {
             'American - Kore (Firm)': { name: 'Kore', accent: 'American' },
             'American - Zephyr (Bright)': { name: 'Zephyr', accent: 'American' },
@@ -184,12 +186,12 @@
             'Indian - Algieba (Smooth)': { name: 'Algieba', accent: 'Indian' }
         };
         const SCORE_LIBRARY = {
-            whimsical: { name: "Whimsical Fantasy", icon: "🪄", url: 'https://www.soundhelix.com/examples/mp3/SoundHelix-Song-16.mp3' },
-            noir: { name: "Noir Mystery", icon: "🕵️", url: 'https://www.soundhelix.com/examples/mp3/SoundHelix-Song-3.mp3' },
-            epic: { name: "High Adventure", icon: "⚔️", url: 'https://www.soundhelix.com/examples/mp3/SoundHelix-Song-8.mp3' },
-            horror: { name: "Dark Suspense", icon: "🌑", url: 'https://www.soundhelix.com/examples/mp3/SoundHelix-Song-2.mp3' },
-            scifi: { name: "Sci-Fi Ambient", icon: "🚀", url: 'https://www.soundhelix.com/examples/mp3/SoundHelix-Song-1.mp3' },
-            dramatic: { name: "Heavy Drama", icon: "🎭", url: 'https://www.soundhelix.com/examples/mp3/SoundHelix-Song-10.mp3' }
+            whimsical: { name: "Whimsical Fantasy", icon: "🪄", url: 'https://www.soundhelix.com/examples/mp3/SoundHelix-Song-16.mp3', keywords: ['magic', 'wonder', 'playful', 'light', 'fantasy', 'enchant', 'fairy', 'charm'] },
+            noir: { name: "Noir Mystery", icon: "🕵️", url: 'https://www.soundhelix.com/examples/mp3/SoundHelix-Song-3.mp3', keywords: ['mystery', 'detective', 'shadow', 'noir', 'investigate', 'clue', 'secret', 'hidden'] },
+            epic: { name: "High Adventure", icon: "⚔️", url: 'https://www.soundhelix.com/examples/mp3/SoundHelix-Song-8.mp3', keywords: ['battle', 'war', 'hero', 'quest', 'adventure', 'fight', 'warrior', 'epic', 'glory', 'triumph'] },
+            horror: { name: "Dark Suspense", icon: "🌑", url: 'https://www.soundhelix.com/examples/mp3/SoundHelix-Song-2.mp3', keywords: ['dark', 'fear', 'horror', 'terror', 'dread', 'nightmare', 'shadow', 'death', 'blood', 'scream'] },
+            scifi: { name: "Sci-Fi Ambient", icon: "🚀", url: 'https://www.soundhelix.com/examples/mp3/SoundHelix-Song-1.mp3', keywords: ['space', 'future', 'technology', 'alien', 'robot', 'cyber', 'quantum', 'science', 'ship', 'galaxy'] },
+            dramatic: { name: "Heavy Drama", icon: "🎭", url: 'https://www.soundhelix.com/examples/mp3/SoundHelix-Song-10.mp3', keywords: ['emotion', 'tragic', 'sorrow', 'loss', 'pain', 'heart', 'tear', 'despair', 'sacrifice'] }
         };
 
         const state = {
@@ -215,7 +217,15 @@
             minTimeBufferRatio: 0.5,
             // Retry delay: Wait 5 seconds before allowing retry after failed generation to avoid rapid retries
             retryDelayMs: 5000,
-            nextChapterTriggered: false
+            nextChapterTriggered: false,
+            // Image generation: Track generated images and queue for pre-generation
+            imageCache: new Map(),
+            imageQueue: [],
+            lastImageIndex: -1,
+            isProcessingImageQueue: false,
+            // Music intelligence: Track current mood and prose content for intelligent selection
+            currentMood: null,
+            lastProseContent: ''
         };
 
         async function initiateSession() {
@@ -258,7 +268,8 @@
             const sys = `You are a professional novelist writing a ${state.genre} story. 
             The session has ${Math.ceil(state.timeLeftSeconds / 60)} minutes remaining.
             Continue the story based on history. If this is the start, use the prompt.
-            Output JSON: { "title": "Chapter Title", "prose": "About 400 words of story", "score_type": "epic/horror/noir/scifi/whimsical/dramatic" }`;
+            Output JSON: { "title": "Chapter Title", "prose": "About 400 words of story", "score_type": "epic/horror/noir/scifi/whimsical/dramatic", "key_visual_moments": ["brief scene description 1", "brief scene description 2"] }
+            Include 2-3 key visual moments that represent important scenes in this chapter.`;
 
             try {
                 const res = await fetch(`https://generativelanguage.googleapis.com/v1beta/models/gemini-3-flash-preview:generateContent?key=${apiKey}`, {
@@ -274,8 +285,16 @@
                 const result = JSON.parse(data.candidates[0].content.parts[0].text);
                 
                 state.history.push(result.prose);
+                state.lastProseContent = result.prose;
+                
+                // Append chapter content to the page
                 appendChapter(result);
-                applyScore(result.score_type);
+                
+                // Intelligently select music based on prose content analysis
+                await applyIntelligentScore(result.prose, result.score_type);
+                
+                // Pre-generate images for this chapter before reading begins
+                await preGenerateChapterImages(result);
             } finally {
                 state.isGeneratingChapter = false;
             }
@@ -345,8 +364,17 @@
                 }
             }
 
-            // Trigger visual every 4 sentences
-            if (state.currentIndex % 4 === 0) updateVisual(state.currentIndex).catch(err => console.error('Visual generation error:', err));
+            // Trigger visual every 4 sentences - use cached images if available
+            // Check if current index aligns with image generation points (every 4 sentences from chapter start)
+            const sentencesIntoChapter = state.currentIndex - state.chapterStartIndex;
+            if (sentencesIntoChapter >= 0 && sentencesIntoChapter % 4 === 0) {
+                if (state.imageCache.has(state.currentIndex)) {
+                    displayCachedImage(state.currentIndex);
+                } else {
+                    // Fallback: generate on-the-fly if not cached
+                    updateVisual(state.currentIndex).catch(err => console.error('Visual generation error:', err));
+                }
+            }
 
             let blob = state.audioBuffer.get(state.currentIndex);
             if (!blob) blob = await fetchTTS(state.sentences[state.currentIndex]);
@@ -441,13 +469,25 @@
                     body: JSON.stringify({ instances: [{ prompt: `Cinematic professional fantasy art, atmospheric, ${state.genre} style: ${context}` }] })
                 });
                 const data = await res.json();
+                
+                // Validate response structure before accessing nested properties
+                if (!data || !data.predictions || !data.predictions[0] || !data.predictions[0].bytesBase64Encoded) {
+                    throw new Error('Invalid API response structure: missing image data');
+                }
+                
                 const img = document.getElementById('scene-image');
                 img.src = `data:image/png;base64,${data.predictions[0].bytesBase64Encoded}`;
                 img.onload = () => {
                     img.classList.remove('opacity-0');
                     document.getElementById('img-overlay').classList.add('opacity-0');
                 };
-            } finally { state.isGeneratingVisual = false; }
+            } catch (err) {
+                console.error('Visual generation error:', err);
+                // Hide overlay on error to avoid blocking the UI
+                document.getElementById('img-overlay').classList.add('opacity-0');
+            } finally { 
+                state.isGeneratingVisual = false; 
+            }
         }
 
         function startTimerDisplay() {
@@ -514,6 +554,152 @@
             badge.classList.remove('opacity-0');
             document.getElementById('music-status').innerText = track.name;
             document.getElementById('genre-icon').innerText = track.icon;
+        }
+
+        async function applyIntelligentScore(proseText, suggestedType) {
+            // Analyze prose content to intelligently select music
+            const lowerText = proseText.toLowerCase();
+            const scores = {};
+            
+            // Calculate score for each music type based on keyword matching
+            for (const [key, track] of Object.entries(SCORE_LIBRARY)) {
+                let score = 0;
+                for (const keyword of track.keywords) {
+                    // Escape special regex characters to prevent injection
+                    const escapedKeyword = keyword.replace(/[.*+?^${}()|[\]\\]/g, '\\$&');
+                    const regex = new RegExp(`\\b${escapedKeyword}\\w*\\b`, 'gi');
+                    const matches = lowerText.match(regex);
+                    score += matches ? matches.length : 0;
+                }
+                scores[key] = score;
+            }
+            
+            // Find the music type with highest score
+            let bestMatch = suggestedType;
+            let highestScore = scores[suggestedType] || 0;
+            
+            for (const [key, score] of Object.entries(scores)) {
+                if (score > highestScore) {
+                    highestScore = score;
+                    bestMatch = key;
+                }
+            }
+            
+            // Only change music if we found a strong match (at least MUSIC_SELECTION_MIN_SCORE keyword occurrences)
+            // or if this is the first chapter
+            if (highestScore >= MUSIC_SELECTION_MIN_SCORE || state.currentMood === null) {
+                state.currentMood = bestMatch;
+                applyScore(bestMatch);
+                console.log(`Intelligent music selection: ${bestMatch} (score: ${highestScore}, suggested: ${suggestedType})`);
+            } else {
+                // Fall back to suggested type if analysis is weak
+                state.currentMood = suggestedType;
+                applyScore(suggestedType);
+                console.log(`Using suggested music: ${suggestedType} (analysis score too low: ${highestScore})`);
+            }
+        }
+
+        async function preGenerateChapterImages(chapterData) {
+            // Generate images for key visual moments before chapter reading begins
+            const visualMoments = chapterData.key_visual_moments || [];
+            
+            if (visualMoments.length === 0) {
+                // Fallback: generate images based on chapter content
+                const sentences = chapterData.prose.match(/[^.!?]+[.!?]+(?=\s|$)/g) || [];
+                // Generate images for every 4 sentences
+                for (let i = 0; i < sentences.length; i += 4) {
+                    const context = sentences.slice(i, Math.min(i + 4, sentences.length)).join(' ');
+                    visualMoments.push(context);
+                }
+            }
+            
+            // Pre-generate first image immediately for display
+            if (visualMoments.length > 0) {
+                const startIdx = state.chapterStartIndex;
+                await generateAndCacheImage(startIdx, visualMoments[0]);
+                
+                // Display the first image immediately since chapter will start from here
+                if (state.imageCache.has(startIdx)) {
+                    displayCachedImage(startIdx);
+                }
+                
+                // Queue remaining images for background generation
+                for (let i = 1; i < visualMoments.length; i++) {
+                    const sentenceIdx = startIdx + (i * 4);
+                    state.imageQueue.push({
+                        index: sentenceIdx,
+                        prompt: visualMoments[i]
+                    });
+                }
+                
+                // Start background image generation (don't await to avoid blocking)
+                // Check if queue processing is already running to prevent race conditions
+                if (!state.isProcessingImageQueue) {
+                    processImageQueue();
+                }
+            }
+        }
+
+        async function generateAndCacheImage(sentenceIdx, promptText) {
+            if (state.imageCache.has(sentenceIdx)) return;
+            
+            try {
+                const res = await fetch(`https://generativelanguage.googleapis.com/v1beta/models/imagen-4.0-generate-001:predict?key=${apiKey}`, {
+                    method: 'POST',
+                    headers: { 'Content-Type': 'application/json' },
+                    body: JSON.stringify({ 
+                        instances: [{ 
+                            prompt: `Cinematic professional fantasy art, atmospheric, ${state.genre} style: ${promptText}` 
+                        }] 
+                    })
+                });
+                const data = await res.json();
+                
+                // Validate response structure before accessing nested properties
+                if (!data || !data.predictions || !data.predictions[0] || !data.predictions[0].bytesBase64Encoded) {
+                    throw new Error('Invalid API response structure: missing image data');
+                }
+                
+                const imageData = `data:image/png;base64,${data.predictions[0].bytesBase64Encoded}`;
+                state.imageCache.set(sentenceIdx, imageData);
+                console.log(`Pre-generated image for sentence ${sentenceIdx}`);
+            } catch (err) {
+                console.error(`Failed to pre-generate image for sentence ${sentenceIdx}:`, err);
+            }
+        }
+
+        async function processImageQueue() {
+            // Prevent multiple concurrent queue processing
+            if (state.isProcessingImageQueue) return;
+            state.isProcessingImageQueue = true;
+            
+            try {
+                // Process queued images in background, one at a time
+                while (state.imageQueue.length > 0) {
+                    const { index, prompt } = state.imageQueue.shift();
+                    await generateAndCacheImage(index, prompt);
+                    // Small delay to avoid overwhelming the API
+                    await new Promise(resolve => setTimeout(resolve, IMAGE_QUEUE_DELAY_MS));
+                }
+            } finally {
+                state.isProcessingImageQueue = false;
+            }
+        }
+
+        function displayCachedImage(sentenceIdx) {
+            if (!state.imageCache.has(sentenceIdx)) return;
+            
+            const img = document.getElementById('scene-image');
+            const overlay = document.getElementById('img-overlay');
+            
+            img.src = state.imageCache.get(sentenceIdx);
+            img.onload = () => {
+                img.classList.remove('opacity-0');
+                overlay.classList.add('opacity-0');
+            };
+            
+            state.lastImageIndex = sentenceIdx;
+            console.log(`Displayed cached image for sentence ${sentenceIdx}`);
         }
 
         async function preloadAudio(idx) {
