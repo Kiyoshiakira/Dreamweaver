@@ -207,7 +207,8 @@
             isGeneratingChapter: false,
             isGeneratingVisual: false,
             chapterStartIndex: 0,
-            estimatedSecondsPerSentence: 8
+            estimatedSecondsPerSentence: 8,
+            averageSentencesPerChapter: 12
         };
 
         async function initiateSession() {
@@ -312,15 +313,17 @@
 
             // Calculate how many sentences are left in current chapter
             const sentencesLeftInChapter = state.sentences.length - state.currentIndex;
+            const sentencesInCurrentChapter = state.sentences.length - state.chapterStartIndex;
             
             // Trigger next chapter generation when halfway through current chapter
             // This allows AI to write while reading
-            if (sentencesLeftInChapter <= Math.floor((state.sentences.length - state.chapterStartIndex) / 2)) {
+            if (sentencesLeftInChapter <= Math.floor(sentencesInCurrentChapter / 2)) {
                 if (shouldGenerateNextChapter()) {
                     // Generate in parallel without awaiting, so reading continues
-                    generateNextChapter("Continue the narrative smoothly.").catch(err => 
-                        console.error('Background chapter generation error:', err)
-                    );
+                    generateNextChapter("Continue the narrative smoothly.").catch(err => {
+                        console.error('Background chapter generation error:', err);
+                        // Note: If generation fails, the system will retry when playCycle reaches end of current chapter
+                    });
                 }
             }
 
@@ -366,8 +369,8 @@
             // Don't generate if no time left
             if (state.timeLeftSeconds <= 0) return false;
             
-            // Estimate time needed for one chapter (avg 12 sentences * 8 seconds per sentence = 96 seconds)
-            const estimatedChapterDuration = 12 * state.estimatedSecondsPerSentence;
+            // Estimate time needed for one chapter (avg sentences per chapter * seconds per sentence)
+            const estimatedChapterDuration = state.averageSentencesPerChapter * state.estimatedSecondsPerSentence;
             
             // Only generate if we have enough time to read at least half of the next chapter
             return state.timeLeftSeconds >= (estimatedChapterDuration / 2);
