@@ -4,6 +4,8 @@
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no">
     <title>Dreamweaver</title>
+    <!-- Note: Tailwind CDN is used for development convenience. For production deployment, 
+         consider using Tailwind CLI or PostCSS plugin: https://tailwindcss.com/docs/installation -->
     <script src="https://cdn.tailwindcss.com"></script>
     <link href="https://fonts.googleapis.com/css2?family=Crimson+Pro:ital,wght@0,400;0,700;1,400&family=Inter:wght@400;700;900&display=swap" rel="stylesheet">
     <script src="https://sdk.scdn.co/spotify-player.js"></script>
@@ -13,11 +15,23 @@
         import { getAuth, signInAnonymously, signInWithCustomToken, onAuthStateChanged } from "https://www.gstatic.com/firebasejs/11.6.1/firebase-auth.js";
         import { getFirestore, collection, doc, addDoc, getDocs, query, where, onSnapshot, deleteDoc, updateDoc } from "https://www.gstatic.com/firebasejs/11.6.1/firebase-firestore.js";
 
-        const firebaseConfig = JSON.parse(__firebase_config);
-        const app = initializeApp(firebaseConfig);
-        const auth = getAuth(app);
-        const db = getFirestore(app);
+        // Firebase configuration - optional, only initialize if config is provided
+        let auth = null;
+        let db = null;
         const appId = typeof __app_id !== 'undefined' ? __app_id : 'narrative-engine-infinite';
+        
+        try {
+            if (typeof __firebase_config !== 'undefined') {
+                const firebaseConfig = JSON.parse(__firebase_config);
+                const app = initializeApp(firebaseConfig);
+                auth = getAuth(app);
+                db = getFirestore(app);
+            } else {
+                console.log('Firebase configuration not provided - running without Firebase backend');
+            }
+        } catch (error) {
+            console.warn('Firebase initialization failed - running without Firebase backend:', error.message);
+        }
 
         window.fb = { auth, db, appId };
 
@@ -32,6 +46,13 @@
             clientId: SPOTIFY_CLIENT_ID,
             redirectUri: SPOTIFY_REDIRECT_URI,
             scopes: SPOTIFY_SCOPES
+        };
+        
+        // Define Spotify Web Playback SDK callback
+        // This function is called when the Spotify SDK is ready
+        window.onSpotifyWebPlaybackSDKReady = () => {
+            console.log('Spotify Web Playback SDK is ready');
+            // Player initialization will be handled when user logs in
         };
     </script>
 
@@ -305,6 +326,13 @@
 
         // Spotify Authentication Functions
         async function loginSpotify() {
+            // Check if Spotify config is available
+            if (!window.spotify || !window.spotify.clientId) {
+                console.error('Spotify configuration not available');
+                alert('Spotify integration is not configured. Please add your Spotify Client ID.');
+                return;
+            }
+            
             const codeVerifier = generateCodeVerifier();
             const codeChallenge = await generateCodeChallenge(codeVerifier);
             
@@ -896,7 +924,16 @@
                     }
                 })
             });
+            
             const data = await res.json();
+            
+            // Validate response structure
+            if (!data || !data.candidates || !data.candidates[0] || 
+                !data.candidates[0].content || !data.candidates[0].content.parts || 
+                !data.candidates[0].content.parts[0] || !data.candidates[0].content.parts[0].inlineData) {
+                throw new Error('Invalid TTS API response structure: ' + JSON.stringify(data));
+            }
+            
             return base64ToWav(data.candidates[0].content.parts[0].inlineData.data, 24000);
         }
 
