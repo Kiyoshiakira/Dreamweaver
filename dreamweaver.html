@@ -345,6 +345,22 @@
         };
 
         // Spotify Authentication Functions
+        
+        // Helper function to extract error message from Spotify API responses
+        // Handles different error formats from different Spotify API endpoints
+        async function parseSpotifyError(response) {
+            let errorMessage = response.statusText;
+            try {
+                const data = await response.json();
+                // Token endpoint returns: error_description, error
+                // Other endpoints return: error.message
+                errorMessage = data.error_description || data.error?.message || data.error || errorMessage;
+            } catch (jsonError) {
+                // If parsing JSON fails (e.g., non-JSON error response), use the HTTP status text as fallback
+            }
+            return errorMessage;
+        }
+        
         async function loginSpotify() {
             // Check if Spotify config is available
             if (!window.spotify || !window.spotify.clientId) {
@@ -440,7 +456,9 @@
                     });
                     
                     if (!response.ok) {
-                        throw new Error(`HTTP ${response.status}: ${response.statusText}`);
+                        // Parse error response to get detailed error message
+                        const errorMessage = await parseSpotifyError(response);
+                        throw new Error(`Spotify authentication failed: ${errorMessage}`);
                     }
                     
                     const data = await response.json();
@@ -469,6 +487,12 @@
                     }
                 } catch (error) {
                     console.error('Error exchanging code for token:', error);
+                    // Show user-friendly error message
+                    alert(`Failed to log in to Spotify: ${error.message}\n\nPlease check that your Spotify Client ID is correct and that the redirect URI is properly configured in your Spotify app settings.`);
+                    // Clear URL parameters to allow retry
+                    window.history.replaceState({}, document.title, window.location.pathname);
+                    // Clean up
+                    localStorage.removeItem('spotify_code_verifier');
                 }
             }
         }
@@ -482,6 +506,16 @@
                         'Authorization': `Bearer ${state.spotifyAccessToken}`
                     }
                 });
+                
+                if (!response.ok) {
+                    // If we can't fetch user info, clear the token as it may be invalid
+                    if (response.status === 401 || response.status === 403) {
+                        logoutSpotify();
+                    }
+                    
+                    const errorMessage = await parseSpotifyError(response);
+                    throw new Error(`Failed to fetch Spotify user info: ${errorMessage}`);
+                }
                 
                 const userData = await response.json();
                 state.spotifyUser = userData;
@@ -530,6 +564,12 @@
                         'Authorization': `Bearer ${state.spotifyAccessToken}`
                     }
                 });
+                
+                if (!response.ok) {
+                    const errorMessage = await parseSpotifyError(response);
+                    console.error(`Spotify search failed: ${errorMessage}`);
+                    return null;
+                }
                 
                 const data = await response.json();
                 
@@ -705,7 +745,9 @@
                 });
                 
                 if (!response.ok) {
-                    throw new Error(`HTTP ${response.status}: ${response.statusText}`);
+                    // Parse error response to get detailed error message
+                    const errorMessage = await parseSpotifyError(response);
+                    throw new Error(`Failed to refresh Spotify token: ${errorMessage}`);
                 }
                 
                 const data = await response.json();
