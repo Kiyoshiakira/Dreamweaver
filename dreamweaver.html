@@ -3,6 +3,35 @@
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no">
+    <!-- Content Security Policy: Allow Spotify SDK and other required sources -->
+    <meta http-equiv="Content-Security-Policy" content="
+        default-src 'self';
+        script-src 'self' 'unsafe-inline' 'unsafe-eval' 
+            https://cdn.tailwindcss.com 
+            https://sdk.scdn.co 
+            https://www.gstatic.com 
+            https://www.google-analytics.com 
+            https://ssl.google-analytics.com 
+            https://www.google.com 
+            https://www.gstatic.com/recaptcha/ 
+            https://www.google.com/recaptcha/ 
+            https://*.googletagmanager.com 
+            https://accounts.scdn.co;
+        style-src 'self' 'unsafe-inline' 
+            https://cdn.tailwindcss.com 
+            https://fonts.googleapis.com;
+        font-src 'self' 
+            https://fonts.gstatic.com;
+        img-src 'self' data: https: blob:;
+        connect-src 'self' 
+            https://generativelanguage.googleapis.com 
+            https://accounts.spotify.com 
+            https://api.spotify.com 
+            https://firebasestorage.googleapis.com 
+            https://*.googleapis.com;
+        media-src 'self' https: blob:;
+        frame-src https://accounts.spotify.com;
+    ">
     <title>Dreamweaver</title>
     <!-- Note: Tailwind CDN is used for development convenience. For production deployment,
          consider using Tailwind CLI or PostCSS plugin: https://tailwindcss.com/docs/installation -->
