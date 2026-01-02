@@ -429,10 +429,10 @@
             // Connect music volume control
             const volControl = document.getElementById('music-vol');
             const initialVolume = parseFloat(volControl.value);
-            state.music.volume = isNaN(initialVolume) ? 0.15 : Math.max(0, Math.min(1, initialVolume));
+            state.music.volume = isNaN(initialVolume) ? 0.15 : Math.max(0, Math.min(0.5, initialVolume));
             volControl.addEventListener('input', (e) => {
                 const volume = parseFloat(e.target.value);
-                state.music.volume = isNaN(volume) ? 0.15 : Math.max(0, Math.min(1, volume));
+                state.music.volume = isNaN(volume) ? 0.15 : Math.max(0, Math.min(0.5, volume));
             });
         };
     </script>
