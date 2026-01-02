@@ -93,6 +93,7 @@ Dreamweaver is a single-page web application that combines multiple AI technolog
    - Add your app's redirect URI (e.g., `http://localhost:8000/dreamweaver.html`)
    - Copy the Client ID and paste it into `SPOTIFY_CLIENT_ID` in `dreamweaver.html`
    - Note: Spotify integration requires HTTPS in production environments
+   - **Important**: The Spotify Web Playback SDK requires `'unsafe-eval'` in the Content Security Policy. The HTML file includes a CSP meta tag with this directive. If you're hosting on a platform that sets server-side CSP headers, ensure those headers also include `'unsafe-eval'` in the `script-src` directive.
 
 4. **Run the Application**:
    Simply open `dreamweaver.html` in your web browser, or serve it using a local web server:
@@ -240,6 +241,7 @@ For more detailed documentation, please visit the [Wiki](../../wiki):
 - Default music library is limited to 6 tracks (Spotify integration provides access to millions of songs)
 - Spotify integration requires a free or premium Spotify account
 - Some Spotify tracks may not have preview URLs available for playback
+- **Content Security Policy**: The Spotify Web Playback SDK requires `'unsafe-eval'` in CSP. If deploying to a hosting platform, ensure server-side CSP headers include this directive to prevent blocking the SDK.
 
 ---
 
