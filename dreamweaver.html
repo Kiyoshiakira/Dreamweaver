@@ -810,7 +810,7 @@
                 await preGenerateChapterImages(result);
             } catch (err) {
                 console.error('Error generating chapter:', err);
-                // If chapter generation fails, we should stop the session
+                // Re-throw error to propagate to caller (initiateSession or generateNextChapter)
                 throw err;
             } finally {
                 state.isGeneratingChapter = false;
