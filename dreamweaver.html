@@ -439,11 +439,12 @@
                         }),
                     });
                     
-                    if (!response.ok) {
-                        throw new Error(`HTTP ${response.status}: ${response.statusText}`);
-                    }
-                    
                     const data = await response.json();
+                    
+                    if (!response.ok) {
+                        const errorMessage = data.error_description || data.error || response.statusText;
+                        throw new Error(`Spotify authentication failed: ${errorMessage}`);
+                    }
                     
                     if (data.access_token) {
                         state.spotifyAccessToken = data.access_token;
@@ -469,6 +470,12 @@
                     }
                 } catch (error) {
                     console.error('Error exchanging code for token:', error);
+                    // Show user-friendly error message
+                    alert(`Failed to log in to Spotify: ${error.message}\n\nPlease check that your Spotify Client ID is correct and that the redirect URI is properly configured in your Spotify app settings.`);
+                    // Clear URL parameters to allow retry
+                    window.history.replaceState({}, document.title, window.location.pathname);
+                    // Clean up
+                    localStorage.removeItem('spotify_code_verifier');
                 }
             }
         }
@@ -483,11 +490,21 @@
                     }
                 });
                 
+                if (!response.ok) {
+                    const data = await response.json();
+                    const errorMessage = data.error?.message || response.statusText;
+                    throw new Error(`Failed to fetch Spotify user info: ${errorMessage}`);
+                }
+                
                 const userData = await response.json();
                 state.spotifyUser = userData;
                 localStorage.setItem('spotify_user', JSON.stringify(userData));
             } catch (error) {
                 console.error('Error fetching Spotify user info:', error);
+                // If we can't fetch user info, clear the token as it may be invalid
+                if (error.message.includes('401') || error.message.includes('403')) {
+                    logoutSpotify();
+                }
             }
         }
 
@@ -530,6 +547,13 @@
                         'Authorization': `Bearer ${state.spotifyAccessToken}`
                     }
                 });
+                
+                if (!response.ok) {
+                    const data = await response.json();
+                    const errorMessage = data.error?.message || response.statusText;
+                    console.error(`Spotify search failed: ${errorMessage}`);
+                    return null;
+                }
                 
                 const data = await response.json();
                 
@@ -704,11 +728,12 @@
                     }),
                 });
                 
-                if (!response.ok) {
-                    throw new Error(`HTTP ${response.status}: ${response.statusText}`);
-                }
-                
                 const data = await response.json();
+                
+                if (!response.ok) {
+                    const errorMessage = data.error_description || data.error || response.statusText;
+                    throw new Error(`Failed to refresh Spotify token: ${errorMessage}`);
+                }
                 
                 if (data.access_token) {
                     state.spotifyAccessToken = data.access_token;
