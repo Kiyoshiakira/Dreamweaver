@@ -269,13 +269,13 @@
             if (!state.isPlaying || state.currentIndex >= state.sentences.length) {
                 if (state.timeLeftSeconds > 0 && !state.isGeneratingChapter) {
                     await generateNextChapter("Continue the narrative smoothly.");
-                    playCycle();
+                    await playCycle();
                 }
                 return;
             }
 
             // Trigger visual every 4 sentences
-            if (state.currentIndex % 4 === 0) updateVisual(state.currentIndex);
+            if (state.currentIndex % 4 === 0) updateVisual(state.currentIndex).catch(err => console.error('Visual generation error:', err));
 
             let blob = state.audioBuffer.get(state.currentIndex);
             if (!blob) blob = await fetchTTS(state.sentences[state.currentIndex]);
@@ -284,13 +284,13 @@
             state.currentAudio.onplay = () => {
                 highlight(state.currentIndex);
                 animateWords(state.currentIndex);
-                preloadAudio(state.currentIndex + 1);
+                preloadAudio(state.currentIndex + 1).catch(err => console.error('Preload error:', err));
             };
             state.currentAudio.onended = () => {
                 state.currentIndex++;
                 playCycle();
             };
-            state.currentAudio.play();
+            state.currentAudio.play().catch(err => console.error('Audio playback error:', err));
         }
 
         async function fetchTTS(text) {
@@ -387,7 +387,7 @@
             if (state.music.src !== track.url) {
                 state.music.src = track.url;
                 state.music.loop = true;
-                state.music.play();
+                state.music.play().catch(err => console.error('Music playback error:', err));
             }
             const badge = document.getElementById('vibe-badge');
             badge.innerText = `Atmosphere: ${track.name}`;
@@ -406,7 +406,10 @@
             state.isPlaying = !state.isPlaying;
             document.getElementById('icon-play').classList.toggle('hidden', state.isPlaying);
             document.getElementById('icon-pause').classList.toggle('hidden', !state.isPlaying);
-            if (state.isPlaying) { state.music.play(); playCycle(); } 
+            if (state.isPlaying) { 
+                state.music.play().catch(err => console.error('Music playback error:', err)); 
+                playCycle(); 
+            } 
             else { state.currentAudio.pause(); state.music.pause(); }
         }
 
@@ -421,6 +424,13 @@
             VOICES.forEach(v => {
                 const o = document.createElement('option'); o.value = v; o.textContent = v;
                 vs.appendChild(o);
+            });
+            
+            // Connect music volume control
+            const volControl = document.getElementById('music-vol');
+            state.music.volume = parseFloat(volControl.value);
+            volControl.addEventListener('input', (e) => {
+                state.music.volume = parseFloat(e.target.value);
             });
         };
     </script>
