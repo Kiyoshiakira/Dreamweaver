@@ -180,7 +180,6 @@ Dreamweaver is a single-page web application that combines multiple AI technolog
 5. Music transitions smoothly between moods as story evolves
 6. **Spotify Integration**: When logged in, searches Spotify for tracks matching the detected mood
 7. **Change Song Feature**: Users can request a different song while maintaining the same genre/mood
-5. Music transitions smoothly between moods as story evolves
 
 ---
 

@@ -22,6 +22,8 @@
         window.fb = { auth, db, appId };
 
         // Spotify Configuration
+        // IMPORTANT: Replace SPOTIFY_CLIENT_ID with your actual Spotify Client ID from https://developer.spotify.com/dashboard
+        // This is a placeholder value and must be updated for Spotify integration to work
         const SPOTIFY_CLIENT_ID = '5c1a5a8a8f4d4f1f9c3e9e5c0c3e0c3e'; // Replace with your Spotify Client ID
         const SPOTIFY_REDIRECT_URI = window.location.origin + window.location.pathname;
         const SPOTIFY_SCOPES = 'streaming user-read-email user-read-private user-modify-playback-state user-read-playback-state';
@@ -389,6 +391,10 @@
                         }),
                     });
                     
+                    if (!response.ok) {
+                        throw new Error(`HTTP ${response.status}: ${response.statusText}`);
+                    }
+                    
                     const data = await response.json();
                     
                     if (data.access_token) {
@@ -649,6 +655,10 @@
                         client_id: window.spotify.clientId,
                     }),
                 });
+                
+                if (!response.ok) {
+                    throw new Error(`HTTP ${response.status}: ${response.statusText}`);
+                }
                 
                 const data = await response.json();
                 
