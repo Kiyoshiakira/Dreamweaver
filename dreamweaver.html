@@ -325,7 +325,10 @@
             // Trigger next chapter generation when halfway through current chapter
             // This allows AI to write while reading
             // Only trigger once per chapter to avoid duplicate generation requests
-            if (!state.nextChapterTriggered && sentencesLeftInChapter <= Math.floor(sentencesInCurrentChapter / 2)) {
+            if (!state.nextChapterTriggered && 
+                sentencesInCurrentChapter > 0 && 
+                sentencesLeftInChapter > 0 &&
+                sentencesLeftInChapter <= Math.floor(sentencesInCurrentChapter / 2)) {
                 if (shouldGenerateNextChapter()) {
                     state.nextChapterTriggered = true;
                     // Generate in parallel without awaiting, so reading continues
@@ -333,7 +336,8 @@
                         console.error('Failed to generate next chapter in background:', err);
                         console.error('Context: Chapter generation failed mid-reading. System will retry when current chapter completes.');
                         // Note: If generation fails, the system will retry when playCycle reaches end of current chapter
-                        state.nextChapterTriggered = false; // Reset flag to allow retry
+                        // Reset flag after a delay to avoid rapid retries
+                        setTimeout(() => { state.nextChapterTriggered = false; }, 5000);
                     });
                 }
             }
