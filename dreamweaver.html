@@ -173,6 +173,8 @@
     <script>
         const apiKey = "";
         const DEFAULT_ACCENT = 'American';
+        const MUSIC_SELECTION_MIN_SCORE = 2; // Minimum keyword matches for intelligent music selection
+        const IMAGE_QUEUE_DELAY_MS = 1000; // Delay between background image generations to avoid API overload
         const VOICES = {
             'American - Kore (Firm)': { name: 'Kore', accent: 'American' },
             'American - Zephyr (Bright)': { name: 'Zephyr', accent: 'American' },
@@ -583,9 +585,9 @@
                 }
             }
             
-            // Only change music if we found a strong match (at least 2 keyword occurrences)
+            // Only change music if we found a strong match (at least MUSIC_SELECTION_MIN_SCORE keyword occurrences)
             // or if this is the first chapter
-            if (highestScore >= 2 || state.currentMood === null) {
+            if (highestScore >= MUSIC_SELECTION_MIN_SCORE || state.currentMood === null) {
                 state.currentMood = bestMatch;
                 applyScore(bestMatch);
                 console.log(`Intelligent music selection: ${bestMatch} (score: ${highestScore}, suggested: ${suggestedType})`);
@@ -615,6 +617,11 @@
             if (visualMoments.length > 0) {
                 const startIdx = state.chapterStartIndex;
                 await generateAndCacheImage(startIdx, visualMoments[0]);
+                
+                // Display the first image immediately since chapter will start from here
+                if (state.imageCache.has(startIdx)) {
+                    displayCachedImage(startIdx);
+                }
                 
                 // Queue remaining images for background generation
                 for (let i = 1; i < visualMoments.length; i++) {
@@ -656,11 +663,6 @@
                 const imageData = `data:image/png;base64,${data.predictions[0].bytesBase64Encoded}`;
                 state.imageCache.set(sentenceIdx, imageData);
                 console.log(`Pre-generated image for sentence ${sentenceIdx}`);
-                
-                // If this is the first image, display it immediately
-                if (state.lastImageIndex === -1) {
-                    displayCachedImage(sentenceIdx);
-                }
             } catch (err) {
                 console.error(`Failed to pre-generate image for sentence ${sentenceIdx}:`, err);
             }
@@ -677,7 +679,7 @@
                     const { index, prompt } = state.imageQueue.shift();
                     await generateAndCacheImage(index, prompt);
                     // Small delay to avoid overwhelming the API
-                    await new Promise(resolve => setTimeout(resolve, 1000));
+                    await new Promise(resolve => setTimeout(resolve, IMAGE_QUEUE_DELAY_MS));
                 }
             } finally {
                 state.isProcessingImageQueue = false;
