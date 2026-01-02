@@ -55,6 +55,11 @@ Dreamweaver is a single-page web application that combines multiple AI technolog
 - **Session Duration**: 5 minutes to 2 hours of continuous storytelling
 - **Score Dynamics**: Adjustable music sensitivity (static to fluid)
 - **Volume Control**: Independent music volume adjustment
+- **🎵 Spotify Integration**: Connect your Spotify account for personalized music selection
+  - Log in with your Spotify account to access millions of tracks
+  - AI intelligently selects tracks based on story mood and genre
+  - Change songs on-the-fly while maintaining the same mood/genre
+  - Seamlessly fallback to default music library when not logged in
 
 ---
 
@@ -64,6 +69,7 @@ Dreamweaver is a single-page web application that combines multiple AI technolog
 - A modern web browser (Chrome, Firefox, Safari, or Edge)
 - Google Gemini API key (for story generation and TTS)
 - Firebase configuration (optional, for user management)
+- Spotify Developer account (optional, for Spotify integration)
 
 ### Installation
 
@@ -78,9 +84,17 @@ Dreamweaver is a single-page web application that combines multiple AI technolog
    ```javascript
    const apiKey = "YOUR_GOOGLE_GEMINI_API_KEY";
    const firebaseConfig = JSON.parse(__firebase_config);
+   const SPOTIFY_CLIENT_ID = "YOUR_SPOTIFY_CLIENT_ID"; // Optional
    ```
 
-3. **Run the Application**:
+3. **Set up Spotify Integration (Optional)**:
+   - Go to [Spotify Developer Dashboard](https://developer.spotify.com/dashboard)
+   - Create a new app
+   - Add your app's redirect URI (e.g., `http://localhost:8000/dreamweaver.html`)
+   - Copy the Client ID and paste it into `SPOTIFY_CLIENT_ID` in `dreamweaver.html`
+   - Note: Spotify integration requires HTTPS in production environments
+
+4. **Run the Application**:
    Simply open `dreamweaver.html` in your web browser, or serve it using a local web server:
    ```bash
    # Using Python
@@ -90,7 +104,7 @@ Dreamweaver is a single-page web application that combines multiple AI technolog
    npx http-server
    ```
 
-4. **Access the App**:
+5. **Access the App**:
    Navigate to `http://localhost:8000` (or open the HTML file directly)
 
 ---
@@ -103,12 +117,14 @@ Dreamweaver is a single-page web application that combines multiple AI technolog
 2. **Set Session Duration**: Pick how long you want the story to continue (5 min - 2 hours)
 3. **Choose a Genre**: Select Fantasy, Sci-Fi, Mystery, Horror, or Historical Drama
 4. **Adjust Score Dynamics**: Control how dynamically the music changes (1-5 scale)
-5. **Enter Your Prompt**: Describe the story you want to hear in the text area
-6. **Click "Begin Story"**: Sit back and enjoy your personalized narrative experience
+5. **Connect Spotify (Optional)**: Click "Connect Spotify" to link your account for personalized music
+6. **Enter Your Prompt**: Describe the story you want to hear in the text area
+7. **Click "Begin Story"**: Sit back and enjoy your personalized narrative experience
 
 ### During Playback
 
 - **Play/Pause**: Use the large circular button at the bottom center
+- **Change Song**: Click the "Change Song" button in the music panel to switch to a different track while keeping the same mood/genre
 - **Volume Control**: Adjust music volume with the slider in the right panel
 - **Visual Sync**: Watch as images change every 4 sentences
 - **Word Tracking**: Follow along with real-time word highlighting
@@ -130,6 +146,10 @@ Dreamweaver is a single-page web application that combines multiple AI technolog
 - **AI Models**: 
   - Google Gemini 3 Flash (story generation & TTS)
   - Google Imagen 4.0 (image generation)
+- **Music Integration**:
+  - Spotify Web API (personalized music selection)
+  - Spotify Web Playback SDK
+  - OAuth 2.0 with PKCE for secure authentication
 - **Fonts**: Crimson Pro (novel text), Inter (UI)
 - **Audio**: Web Audio API, HTML5 Audio
 - **Backend**: Firebase (optional, for user management)
@@ -158,6 +178,8 @@ Dreamweaver is a single-page web application that combines multiple AI technolog
 3. Each track scored based on keyword frequency matches
 4. Highest-scoring track selected if confidence threshold met (≥2 matches)
 5. Music transitions smoothly between moods as story evolves
+6. **Spotify Integration**: When logged in, searches Spotify for tracks matching the detected mood
+7. **Change Song Feature**: Users can request a different song while maintaining the same genre/mood
 
 ---
 
@@ -193,6 +215,7 @@ This project is licensed under the MIT License - see the [LICENSE](LICENSE) file
 ## 🙏 Acknowledgments
 
 - Google Generative AI for Gemini and Imagen APIs
+- Spotify for music streaming and Web API integration
 - Firebase for backend infrastructure
 - Tailwind CSS for styling framework
 - SoundHelix for demo music tracks
@@ -214,13 +237,18 @@ For more detailed documentation, please visit the [Wiki](../../wiki):
 - Requires valid API keys to function
 - Image generation may be slow on slower connections
 - Some voices may not support all accents perfectly
-- Music library is currently limited to 6 tracks
+- Default music library is limited to 6 tracks (Spotify integration provides access to millions of songs)
+- Spotify integration requires a free or premium Spotify account
+- Some Spotify tracks may not have preview URLs available for playback
 
 ---
 
 ## 🗺️ Roadmap
 
-- [ ] Expand music library with more genre-specific tracks
+- [x] Spotify integration for personalized music selection
+- [x] Change song feature to switch tracks while maintaining mood
+- [ ] Expand default music library with more genre-specific tracks
+- [ ] Full Spotify Web Playback SDK integration for complete track playback
 - [ ] Add user story saving/loading functionality
 - [ ] Implement story branching and user choices
 - [ ] Support for custom voice training
