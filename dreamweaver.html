@@ -767,7 +767,20 @@
                         generationConfig: { responseMimeType: "application/json" }
                     })
                 });
+                
+                if (!res.ok) {
+                    throw new Error(`API request failed: ${res.status} ${res.statusText}`);
+                }
+                
                 const data = await res.json();
+                
+                // Validate response structure
+                if (!data || !data.candidates || !data.candidates[0] || 
+                    !data.candidates[0].content || !data.candidates[0].content.parts || 
+                    !data.candidates[0].content.parts[0] || !data.candidates[0].content.parts[0].text) {
+                    throw new Error('Invalid story generation API response: ' + JSON.stringify(data));
+                }
+                
                 const result = JSON.parse(data.candidates[0].content.parts[0].text);
                 
                 state.history.push(result.prose);
@@ -781,6 +794,10 @@
                 
                 // Pre-generate images for this chapter before reading begins
                 await preGenerateChapterImages(result);
+            } catch (err) {
+                console.error('Error generating chapter:', err);
+                // If chapter generation fails, we should stop the session
+                throw err;
             } finally {
                 state.isGeneratingChapter = false;
             }
@@ -925,6 +942,10 @@
                 })
             });
             
+            if (!res.ok) {
+                throw new Error(`TTS API request failed: ${res.status} ${res.statusText}`);
+            }
+            
             const data = await res.json();
             
             // Validate response structure
@@ -963,6 +984,11 @@
                     headers: { 'Content-Type': 'application/json' },
                     body: JSON.stringify({ instances: [{ prompt: `Cinematic professional fantasy art, atmospheric, ${state.genre} style: ${context}` }] })
                 });
+                
+                if (!res.ok) {
+                    throw new Error(`Image API request failed: ${res.status} ${res.statusText}`);
+                }
+                
                 const data = await res.json();
                 
                 // Validate response structure before accessing nested properties
@@ -1176,6 +1202,11 @@
                         }] 
                     })
                 });
+                
+                if (!res.ok) {
+                    throw new Error(`Image API request failed: ${res.status} ${res.statusText}`);
+                }
+                
                 const data = await res.json();
                 
                 // Validate response structure before accessing nested properties
