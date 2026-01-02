@@ -51,7 +51,7 @@
                 <div class="w-10 h-10 bg-indigo-600 rounded-xl flex items-center justify-center shadow-lg shadow-indigo-500/20">
                     <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="white" stroke-width="2.5"><path d="M12 2L2 7l10 5 10-5-10-5zM2 17l10 5 10-5M2 12l10 5 10-5"/></svg>
                 </div>
-                <h1 class="text-xl font-black tracking-tighter uppercase">Infinite<span class="text-indigo-500">Narrator</span></h1>
+                <h1 class="text-xl font-black tracking-tighter uppercase">Dream<span class="text-indigo-500">weaver</span></h1>
             </div>
             
             <div id="session-timer" class="hidden glass px-6 py-2 rounded-full border border-indigo-500/30 font-mono text-indigo-400 font-bold timer-glow">
@@ -63,8 +63,8 @@
         <main id="view-home" class="flex-1 max-w-3xl mx-auto px-6 py-12 w-full">
             <div class="glass rounded-[2.5rem] p-10 space-y-10 shadow-2xl border border-white/5">
                 <div class="space-y-4">
-                    <h2 class="text-4xl font-black tracking-tight">System Configuration</h2>
-                    <p class="text-slate-400 text-sm">Set your session parameters for continuous automated narration.</p>
+                    <h2 class="text-4xl font-black tracking-tight">Welcome to Dreamweaver</h2>
+                    <p class="text-slate-400 text-sm">Tell me what story you'd like to hear, and I'll weave it for you.</p>
                 </div>
 
                 <div class="grid grid-cols-1 md:grid-cols-2 gap-8">
@@ -85,12 +85,11 @@
                         </select>
                     </div>
 
-                    <!-- Writing Genre -->
                     <div class="space-y-2">
                         <label class="text-indigo-400 text-[11px] font-black uppercase tracking-widest ml-1">Narrative Genre</label>
                         <select id="genre-select" class="w-full bg-slate-900 border border-white/10 rounded-2xl p-4 text-white appearance-none cursor-pointer">
-                            <option value="Fantasy">Fantasy (Necromancy/Twin Souls)</option>
-                            <option value="Sci-Fi">Sci-Fi (Yeet Corp)</option>
+                            <option value="Fantasy">Fantasy</option>
+                            <option value="Sci-Fi">Sci-Fi</option>
                             <option value="Mystery">Mystery</option>
                             <option value="Horror">Horror</option>
                             <option value="Drama">Historical Drama</option>
@@ -109,12 +108,12 @@
                 </div>
                 
                 <div class="space-y-2">
-                    <label class="text-indigo-400 text-[11px] font-black uppercase tracking-widest ml-1">Initial Premise</label>
-                    <textarea id="prompt-input" class="w-full bg-slate-900 border border-white/10 rounded-3xl p-6 text-white h-40 focus:ring-2 ring-indigo-500 outline-none resize-none text-lg leading-relaxed" placeholder="Twin Souls City, the river split, Kretia's harvest..."></textarea>
+                    <label class="text-indigo-400 text-[11px] font-black uppercase tracking-widest ml-1">Story Prompt</label>
+                    <textarea id="prompt-input" class="w-full bg-slate-900 border border-white/10 rounded-3xl p-6 text-white h-40 focus:ring-2 ring-indigo-500 outline-none resize-none text-lg leading-relaxed" placeholder="What story would you like to hear? Describe your characters, setting, or adventure..."></textarea>
                 </div>
 
                 <button id="start-btn" onclick="initiateSession()" class="w-full py-6 bg-indigo-600 rounded-2xl font-black text-xl shadow-xl hover:bg-indigo-500 transition-all active:scale-[0.98] uppercase tracking-widest">
-                    Begin Narration Loop
+                    Begin Story
                 </button>
             </div>
         </main>
@@ -219,7 +218,7 @@
         };
 
         async function initiateSession() {
-            const prompt = document.getElementById('prompt-input').value || "In the heart of Twin Souls City...";
+            const prompt = document.getElementById('prompt-input').value || "Tell me an interesting story.";
             const selectedVoice = document.getElementById('voice-select').value;
             let voiceConfig = VOICES[selectedVoice];
             
