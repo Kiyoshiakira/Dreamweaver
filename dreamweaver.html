@@ -562,8 +562,13 @@
                 });
                 
                 if (!response.ok) {
-                    const data = await response.json();
-                    const errorMessage = data.error?.message || response.statusText;
+                    let errorMessage = response.statusText;
+                    try {
+                        const data = await response.json();
+                        errorMessage = data.error?.message || errorMessage;
+                    } catch (jsonError) {
+                        // If parsing JSON fails, use the HTTP status text
+                    }
                     console.error(`Spotify search failed: ${errorMessage}`);
                     return null;
                 }
