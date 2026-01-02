@@ -220,6 +220,7 @@
             imageCache: new Map(),
             imageQueue: [],
             lastImageIndex: -1,
+            isProcessingImageQueue: false,
             // Music intelligence: Track current mood and prose content for intelligent selection
             currentMood: null,
             lastProseContent: ''
@@ -548,7 +549,9 @@
             for (const [key, track] of Object.entries(SCORE_LIBRARY)) {
                 let score = 0;
                 for (const keyword of track.keywords) {
-                    const regex = new RegExp(`\\b${keyword}\\w*\\b`, 'gi');
+                    // Escape special regex characters to prevent injection
+                    const escapedKeyword = keyword.replace(/[.*+?^${}()|[\]\\]/g, '\\$&');
+                    const regex = new RegExp(`\\b${escapedKeyword}\\w*\\b`, 'gi');
                     const matches = lowerText.match(regex);
                     score += matches ? matches.length : 0;
                 }
@@ -608,8 +611,11 @@
                     });
                 }
                 
-                // Start background image generation
-                processImageQueue();
+                // Start background image generation (don't await to avoid blocking)
+                // Check if queue processing is already running to prevent race conditions
+                if (!state.isProcessingImageQueue) {
+                    processImageQueue();
+                }
             }
         }
 
@@ -627,6 +633,12 @@
                     })
                 });
                 const data = await res.json();
+                
+                // Validate response structure before accessing nested properties
+                if (!data || !data.predictions || !data.predictions[0] || !data.predictions[0].bytesBase64Encoded) {
+                    throw new Error('Invalid API response structure: missing image data');
+                }
+                
                 const imageData = `data:image/png;base64,${data.predictions[0].bytesBase64Encoded}`;
                 state.imageCache.set(sentenceIdx, imageData);
                 console.log(`Pre-generated image for sentence ${sentenceIdx}`);
@@ -641,12 +653,20 @@
         }
 
         async function processImageQueue() {
-            // Process queued images in background, one at a time
-            while (state.imageQueue.length > 0) {
-                const { index, prompt } = state.imageQueue.shift();
-                await generateAndCacheImage(index, prompt);
-                // Small delay to avoid overwhelming the API
-                await new Promise(resolve => setTimeout(resolve, 1000));
+            // Prevent multiple concurrent queue processing
+            if (state.isProcessingImageQueue) return;
+            state.isProcessingImageQueue = true;
+            
+            try {
+                // Process queued images in background, one at a time
+                while (state.imageQueue.length > 0) {
+                    const { index, prompt } = state.imageQueue.shift();
+                    await generateAndCacheImage(index, prompt);
+                    // Small delay to avoid overwhelming the API
+                    await new Promise(resolve => setTimeout(resolve, 1000));
+                }
+            } finally {
+                state.isProcessingImageQueue = false;
             }
         }
 
