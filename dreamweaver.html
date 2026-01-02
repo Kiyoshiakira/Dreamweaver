@@ -158,7 +158,7 @@
         </main>
 
         <div id="control-panel" class="hidden fixed bottom-10 left-1/2 -translate-x-1/2 w-[90%] max-w-4xl glass rounded-[2.5rem] p-5 shadow-2xl z-50 border border-white/10">
-            <div class="flex items-center gap-4">
+            <div class="flex flex-col sm:flex-row items-center gap-4">
                 <!-- Playback Controls -->
                 <div class="flex items-center gap-3">
                     <button onclick="restartPlayback()" class="w-12 h-12 bg-slate-700 rounded-2xl flex items-center justify-center text-white shadow-lg hover:bg-slate-600 active:scale-95 transition-all" title="Restart from beginning">
@@ -174,7 +174,7 @@
                 </div>
                 
                 <!-- Current Word Display -->
-                <div class="flex-1 overflow-hidden">
+                <div class="flex-1 overflow-hidden min-w-0">
                     <div class="text-[10px] font-black text-indigo-400 uppercase tracking-widest mb-1">Live Feed</div>
                     <div id="current-word" class="text-xl font-black text-white truncate italic">...</div>
                 </div>
@@ -196,6 +196,7 @@
         const DEFAULT_ACCENT = 'American';
         const MUSIC_SELECTION_MIN_SCORE = 2; // Minimum keyword matches for intelligent music selection
         const IMAGE_QUEUE_DELAY_MS = 1000; // Delay between background image generations to avoid API overload
+        const RESTART_PLAYBACK_DELAY_MS = 300; // Delay before starting playback after restart to allow UI updates to complete
         const VOICES = {
             'American - Kore (Firm)': { name: 'Kore', accent: 'American' },
             'American - Zephyr (Bright)': { name: 'Zephyr', accent: 'American' },
@@ -753,13 +754,12 @@
         }
 
         function stopPlayback() {
-            if (!state.isPlaying) return;
-            
+            // Stop playback
             state.isPlaying = false;
             state.currentAudio.pause();
             state.music.pause();
             
-            // Update UI
+            // Update UI to ensure consistency even if already stopped
             document.getElementById('icon-play').classList.remove('hidden');
             document.getElementById('icon-pause').classList.add('hidden');
             
@@ -790,7 +790,7 @@
             // Start playing from beginning
             setTimeout(() => {
                 togglePlayback();
-            }, 300);
+            }, RESTART_PLAYBACK_DELAY_MS);
         }
 
         async function changeVoice(selectedVoice) {
