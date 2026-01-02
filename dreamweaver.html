@@ -345,6 +345,22 @@
         };
 
         // Spotify Authentication Functions
+        
+        // Helper function to extract error message from Spotify API responses
+        // Handles different error formats from different Spotify API endpoints
+        async function parseSpotifyError(response) {
+            let errorMessage = response.statusText;
+            try {
+                const data = await response.json();
+                // Token endpoint returns: error_description, error
+                // Other endpoints return: error.message
+                errorMessage = data.error_description || data.error?.message || data.error || errorMessage;
+            } catch (jsonError) {
+                // If parsing JSON fails, use the HTTP status text
+            }
+            return errorMessage;
+        }
+        
         async function loginSpotify() {
             // Check if Spotify config is available
             if (!window.spotify || !window.spotify.clientId) {
@@ -441,13 +457,7 @@
                     
                     if (!response.ok) {
                         // Parse error response to get detailed error message
-                        let errorMessage = response.statusText;
-                        try {
-                            const data = await response.json();
-                            errorMessage = data.error_description || data.error || errorMessage;
-                        } catch (jsonError) {
-                            // If parsing JSON fails, use the HTTP status text
-                        }
+                        const errorMessage = await parseSpotifyError(response);
                         throw new Error(`Spotify authentication failed: ${errorMessage}`);
                     }
                     
@@ -503,13 +513,7 @@
                         logoutSpotify();
                     }
                     
-                    let errorMessage = response.statusText;
-                    try {
-                        const data = await response.json();
-                        errorMessage = data.error?.message || errorMessage;
-                    } catch (jsonError) {
-                        // If parsing JSON fails, use the HTTP status text
-                    }
+                    const errorMessage = await parseSpotifyError(response);
                     throw new Error(`Failed to fetch Spotify user info: ${errorMessage}`);
                 }
                 
@@ -562,13 +566,7 @@
                 });
                 
                 if (!response.ok) {
-                    let errorMessage = response.statusText;
-                    try {
-                        const data = await response.json();
-                        errorMessage = data.error?.message || errorMessage;
-                    } catch (jsonError) {
-                        // If parsing JSON fails, use the HTTP status text
-                    }
+                    const errorMessage = await parseSpotifyError(response);
                     console.error(`Spotify search failed: ${errorMessage}`);
                     return null;
                 }
@@ -748,13 +746,7 @@
                 
                 if (!response.ok) {
                     // Parse error response to get detailed error message
-                    let errorMessage = response.statusText;
-                    try {
-                        const data = await response.json();
-                        errorMessage = data.error_description || data.error || errorMessage;
-                    } catch (jsonError) {
-                        // If parsing JSON fails, use the HTTP status text
-                    }
+                    const errorMessage = await parseSpotifyError(response);
                     throw new Error(`Failed to refresh Spotify token: ${errorMessage}`);
                 }
                 
