@@ -4,7 +4,7 @@
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no">
     <title>Dreamweaver</title>
-    <!-- Note: Tailwind CDN is used for development convenience. For production deployment, 
+    <!-- Note: Tailwind CDN is used for development convenience. For production deployment,
          consider using Tailwind CLI or PostCSS plugin: https://tailwindcss.com/docs/installation -->
     <script src="https://cdn.tailwindcss.com"></script>
     <link href="https://fonts.googleapis.com/css2?family=Crimson+Pro:ital,wght@0,400;0,700;1,400&family=Inter:wght@400;700;900&display=swap" rel="stylesheet">
@@ -261,6 +261,26 @@
         const MUSIC_SELECTION_MIN_SCORE = 2; // Minimum keyword matches for intelligent music selection
         const IMAGE_QUEUE_DELAY_MS = 1000; // Delay between background image generations to avoid API overload
         const RESTART_PLAYBACK_DELAY_MS = 300; // Delay before starting playback after restart to allow UI updates to complete
+        
+        // API Response Validation Helpers
+        function validateStoryResponse(data) {
+            if (!data || !data.candidates || !data.candidates[0] || 
+                !data.candidates[0].content || !data.candidates[0].content.parts || 
+                !data.candidates[0].content.parts[0] || !data.candidates[0].content.parts[0].text) {
+                throw new Error('Invalid story generation API response: ' + JSON.stringify(data));
+            }
+            return data;
+        }
+        
+        function validateTTSResponse(data) {
+            if (!data || !data.candidates || !data.candidates[0] || 
+                !data.candidates[0].content || !data.candidates[0].content.parts || 
+                !data.candidates[0].content.parts[0] || !data.candidates[0].content.parts[0].inlineData) {
+                throw new Error('Invalid TTS API response structure: ' + JSON.stringify(data));
+            }
+            return data;
+        }
+        
         const VOICES = {
             'American - Kore (Firm)': { name: 'Kore', accent: 'American' },
             'American - Zephyr (Bright)': { name: 'Zephyr', accent: 'American' },
@@ -773,13 +793,7 @@
                 }
                 
                 const data = await res.json();
-                
-                // Validate response structure
-                if (!data || !data.candidates || !data.candidates[0] || 
-                    !data.candidates[0].content || !data.candidates[0].content.parts || 
-                    !data.candidates[0].content.parts[0] || !data.candidates[0].content.parts[0].text) {
-                    throw new Error('Invalid story generation API response: ' + JSON.stringify(data));
-                }
+                validateStoryResponse(data); // Validate response structure
                 
                 const result = JSON.parse(data.candidates[0].content.parts[0].text);
                 
@@ -947,13 +961,7 @@
             }
             
             const data = await res.json();
-            
-            // Validate response structure
-            if (!data || !data.candidates || !data.candidates[0] || 
-                !data.candidates[0].content || !data.candidates[0].content.parts || 
-                !data.candidates[0].content.parts[0] || !data.candidates[0].content.parts[0].inlineData) {
-                throw new Error('Invalid TTS API response structure: ' + JSON.stringify(data));
-            }
+            validateTTSResponse(data); // Validate response structure
             
             return base64ToWav(data.candidates[0].content.parts[0].inlineData.data, 24000);
         }
