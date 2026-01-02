@@ -157,14 +157,36 @@
             </div>
         </main>
 
-        <div id="control-panel" class="hidden fixed bottom-10 left-1/2 -translate-x-1/2 w-[90%] max-w-2xl glass rounded-[2.5rem] p-5 shadow-2xl z-50 flex items-center gap-8 border border-white/10">
-            <button onclick="togglePlayback()" class="w-16 h-16 bg-white rounded-3xl flex items-center justify-center text-indigo-900 shadow-xl hover:scale-105 active:scale-95 transition-all">
-                <svg id="icon-play" width="32" height="32" viewBox="0 0 24 24" fill="currentColor"><path d="M8 5v14l11-7z"></path></svg>
-                <svg id="icon-pause" class="hidden" width="32" height="32" viewBox="0 0 24 24" fill="currentColor"><path d="M6 19h4V5H6v14zm8-14v14h4V5h-4z"></path></svg>
-            </button>
-            <div class="flex-1 overflow-hidden">
-                <div class="text-[10px] font-black text-indigo-400 uppercase tracking-widest mb-1">Live Feed</div>
-                <div id="current-word" class="text-xl font-black text-white truncate italic">...</div>
+        <div id="control-panel" class="hidden fixed bottom-10 left-1/2 -translate-x-1/2 w-[90%] max-w-4xl glass rounded-[2.5rem] p-5 shadow-2xl z-50 border border-white/10">
+            <div class="flex items-center gap-4">
+                <!-- Playback Controls -->
+                <div class="flex items-center gap-3">
+                    <button onclick="restartPlayback()" class="w-12 h-12 bg-slate-700 rounded-2xl flex items-center justify-center text-white shadow-lg hover:bg-slate-600 active:scale-95 transition-all" title="Restart from beginning">
+                        <svg width="24" height="24" viewBox="0 0 24 24" fill="currentColor"><path d="M12 5V1L7 6l5 5V7c3.31 0 6 2.69 6 6s-2.69 6-6 6-6-2.69-6-6H4c0 4.42 3.58 8 8 8s8-3.58 8-8-3.58-8-8-8z"></path></svg>
+                    </button>
+                    <button onclick="togglePlayback()" class="w-16 h-16 bg-white rounded-3xl flex items-center justify-center text-indigo-900 shadow-xl hover:scale-105 active:scale-95 transition-all">
+                        <svg id="icon-play" width="32" height="32" viewBox="0 0 24 24" fill="currentColor"><path d="M8 5v14l11-7z"></path></svg>
+                        <svg id="icon-pause" class="hidden" width="32" height="32" viewBox="0 0 24 24" fill="currentColor"><path d="M6 19h4V5H6v14zm8-14v14h4V5h-4z"></path></svg>
+                    </button>
+                    <button onclick="stopPlayback()" class="w-12 h-12 bg-slate-700 rounded-2xl flex items-center justify-center text-white shadow-lg hover:bg-slate-600 active:scale-95 transition-all" title="Stop playback">
+                        <svg width="24" height="24" viewBox="0 0 24 24" fill="currentColor"><rect x="6" y="6" width="12" height="12"></rect></svg>
+                    </button>
+                </div>
+                
+                <!-- Current Word Display -->
+                <div class="flex-1 overflow-hidden">
+                    <div class="text-[10px] font-black text-indigo-400 uppercase tracking-widest mb-1">Live Feed</div>
+                    <div id="current-word" class="text-xl font-black text-white truncate italic">...</div>
+                </div>
+                
+                <!-- Voice Selector -->
+                <div class="flex items-center gap-3">
+                    <div class="text-right">
+                        <div class="text-[10px] font-black text-indigo-400 uppercase tracking-widest mb-1">Narrator</div>
+                        <select id="voice-select-reader" onchange="changeVoice(this.value)" class="bg-slate-800 border border-white/10 rounded-xl px-4 py-2 text-white text-sm appearance-none cursor-pointer hover:bg-slate-700 transition-colors">
+                        </select>
+                    </div>
+                </div>
             </div>
         </div>
     </div>
@@ -243,6 +265,9 @@
             state.accent = voiceConfig.accent;
             state.timeLeftSeconds = parseInt(document.getElementById('length-select').value) * 60;
             state.genre = document.getElementById('genre-select').value;
+            
+            // Sync reader voice selector with initial selection
+            document.getElementById('voice-select-reader').value = selectedVoice;
             
             switchView('reader');
             startTimerDisplay();
@@ -727,6 +752,89 @@
             else { state.currentAudio.pause(); state.music.pause(); }
         }
 
+        function stopPlayback() {
+            if (!state.isPlaying) return;
+            
+            state.isPlaying = false;
+            state.currentAudio.pause();
+            state.music.pause();
+            
+            // Update UI
+            document.getElementById('icon-play').classList.remove('hidden');
+            document.getElementById('icon-pause').classList.add('hidden');
+            
+            // Clear word highlighting
+            document.querySelectorAll('.word-active').forEach(e => e.classList.remove('word-active'));
+            document.getElementById('current-word').innerText = '...';
+        }
+
+        function restartPlayback() {
+            // Stop current playback
+            stopPlayback();
+            
+            // Reset to beginning
+            state.currentIndex = 0;
+            
+            // Clear all highlighting
+            document.querySelectorAll('.sentence-span').forEach(el => {
+                el.classList.remove('sentence-active');
+            });
+            document.querySelectorAll('.word-active').forEach(e => e.classList.remove('word-active'));
+            
+            // Scroll to top
+            const firstSentence = document.getElementById('s-0');
+            if (firstSentence) {
+                firstSentence.scrollIntoView({ behavior: 'smooth', block: 'start' });
+            }
+            
+            // Start playing from beginning
+            setTimeout(() => {
+                togglePlayback();
+            }, 300);
+        }
+
+        async function changeVoice(selectedVoice) {
+            const wasPlaying = state.isPlaying;
+            const currentPosition = state.currentIndex;
+            
+            // Pause playback if currently playing
+            if (wasPlaying) {
+                state.isPlaying = false;
+                state.currentAudio.pause();
+            }
+            
+            // Update voice configuration
+            const voiceConfig = VOICES[selectedVoice];
+            if (!voiceConfig) {
+                console.error('Invalid voice selection:', selectedVoice);
+                return;
+            }
+            
+            state.voice = voiceConfig.name;
+            state.accent = voiceConfig.accent;
+            
+            // Clear audio buffer to force regeneration with new voice
+            state.audioBuffer.clear();
+            
+            // Update both voice selectors to stay in sync
+            document.getElementById('voice-select').value = selectedVoice;
+            document.getElementById('voice-select-reader').value = selectedVoice;
+            
+            // Preload next few sentences with new voice
+            const preloadPromises = [];
+            for (let i = currentPosition; i < Math.min(currentPosition + 3, state.sentences.length); i++) {
+                preloadPromises.push(preloadAudio(i));
+            }
+            await Promise.all(preloadPromises);
+            
+            // Resume playback if it was playing before
+            if (wasPlaying) {
+                state.isPlaying = true;
+                playCycle().catch(err => console.error('Playback cycle error:', err));
+                state.music.play().catch(err => console.error('Music playback error:', err));
+            }
+        }
+
         function switchView(v) {
             document.getElementById('view-home').classList.toggle('hidden', v !== 'home');
             document.getElementById('view-reader').classList.toggle('hidden', v !== 'reader');
@@ -735,11 +843,18 @@
 
         window.onload = () => {
             const vs = document.getElementById('voice-select');
+            const vsReader = document.getElementById('voice-select-reader');
             Object.keys(VOICES).forEach(label => {
                 const o = document.createElement('option');
                 o.value = label;
                 o.textContent = label;
                 vs.appendChild(o);
+                
+                // Also populate reader voice selector
+                const oReader = document.createElement('option');
+                oReader.value = label;
+                oReader.textContent = label;
+                vsReader.appendChild(oReader);
             });
             
             // Connect music volume control
