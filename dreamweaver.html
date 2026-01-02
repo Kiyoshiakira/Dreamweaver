@@ -207,8 +207,13 @@
             isGeneratingChapter: false,
             isGeneratingVisual: false,
             chapterStartIndex: 0,
+            // Timing estimates: ~8 seconds per sentence based on TTS speed and natural reading pace
             estimatedSecondsPerSentence: 8,
-            averageSentencesPerChapter: 12
+            // Average chapter length: ~12 sentences (~400 words) for optimal pacing and generation speed
+            averageSentencesPerChapter: 12,
+            // Minimum time buffer: Require at least half a chapter's duration before generating next chapter
+            minTimeBufferRatio: 0.5,
+            nextChapterTriggered: false
         };
 
         async function initiateSession() {
@@ -281,6 +286,8 @@
             
             // Track where this chapter starts
             state.chapterStartIndex = startIdx;
+            // Reset flag for next chapter generation trigger
+            state.nextChapterTriggered = false;
             
             document.getElementById('reader-title').innerText = data.title;
             
@@ -317,12 +324,16 @@
             
             // Trigger next chapter generation when halfway through current chapter
             // This allows AI to write while reading
-            if (sentencesLeftInChapter <= Math.floor(sentencesInCurrentChapter / 2)) {
+            // Only trigger once per chapter to avoid duplicate generation requests
+            if (!state.nextChapterTriggered && sentencesLeftInChapter <= Math.floor(sentencesInCurrentChapter / 2)) {
                 if (shouldGenerateNextChapter()) {
+                    state.nextChapterTriggered = true;
                     // Generate in parallel without awaiting, so reading continues
                     generateNextChapter("Continue the narrative smoothly.").catch(err => {
-                        console.error('Background chapter generation error:', err);
+                        console.error('Failed to generate next chapter in background:', err);
+                        console.error('Context: Chapter generation failed mid-reading. System will retry when current chapter completes.');
                         // Note: If generation fails, the system will retry when playCycle reaches end of current chapter
+                        state.nextChapterTriggered = false; // Reset flag to allow retry
                     });
                 }
             }
@@ -372,8 +383,9 @@
             // Estimate time needed for one chapter (avg sentences per chapter * seconds per sentence)
             const estimatedChapterDuration = state.averageSentencesPerChapter * state.estimatedSecondsPerSentence;
             
-            // Only generate if we have enough time to read at least half of the next chapter
-            return state.timeLeftSeconds >= (estimatedChapterDuration / 2);
+            // Only generate if we have enough time to read at least minTimeBufferRatio of the next chapter
+            // This prevents starting chapters that won't have time to complete
+            return state.timeLeftSeconds >= (estimatedChapterDuration * state.minTimeBufferRatio);
         }
 
         async function fetchTTS(text) {
