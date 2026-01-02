@@ -205,7 +205,9 @@
             currentAudio: new Audio(),
             music: new Audio(),
             isGeneratingChapter: false,
-            isGeneratingVisual: false
+            isGeneratingVisual: false,
+            chapterStartIndex: 0,
+            estimatedSecondsPerSentence: 8
         };
 
         async function initiateSession() {
@@ -276,6 +278,9 @@
             const chapterSents = data.prose.match(/[^.!?]+[.!?]+(?=\s|$)/g) || [data.prose];
             const startIdx = state.sentences.length;
             
+            // Track where this chapter starts
+            state.chapterStartIndex = startIdx;
+            
             document.getElementById('reader-title').innerText = data.title;
             
             chapterSents.forEach((text, i) => {
@@ -296,12 +301,27 @@
         }
 
         async function playCycle() {
+            // Check if we should stop playback
             if (!state.isPlaying || state.currentIndex >= state.sentences.length) {
-                if (state.timeLeftSeconds > 0 && !state.isGeneratingChapter) {
+                if (shouldGenerateNextChapter()) {
                     await generateNextChapter("Continue the narrative smoothly.");
                     await playCycle();
                 }
                 return;
+            }
+
+            // Calculate how many sentences are left in current chapter
+            const sentencesLeftInChapter = state.sentences.length - state.currentIndex;
+            
+            // Trigger next chapter generation when halfway through current chapter
+            // This allows AI to write while reading
+            if (sentencesLeftInChapter <= Math.floor((state.sentences.length - state.chapterStartIndex) / 2)) {
+                if (shouldGenerateNextChapter()) {
+                    // Generate in parallel without awaiting, so reading continues
+                    generateNextChapter("Continue the narrative smoothly.").catch(err => 
+                        console.error('Background chapter generation error:', err)
+                    );
+                }
             }
 
             // Trigger visual every 4 sentences
@@ -337,6 +357,20 @@
             
             // Play immediately without delay
             state.currentAudio.play().catch(err => console.error('Audio playback error:', err));
+        }
+        
+        function shouldGenerateNextChapter() {
+            // Don't generate if already generating
+            if (state.isGeneratingChapter) return false;
+            
+            // Don't generate if no time left
+            if (state.timeLeftSeconds <= 0) return false;
+            
+            // Estimate time needed for one chapter (avg 12 sentences * 8 seconds per sentence = 96 seconds)
+            const estimatedChapterDuration = 12 * state.estimatedSecondsPerSentence;
+            
+            // Only generate if we have enough time to read at least half of the next chapter
+            return state.timeLeftSeconds >= (estimatedChapterDuration / 2);
         }
 
         async function fetchTTS(text) {
@@ -398,7 +432,18 @@
             const el = document.getElementById('session-timer');
             el.classList.remove('hidden');
             const iv = setInterval(() => {
-                if (state.timeLeftSeconds <= 0) { clearInterval(iv); return; }
+                if (state.timeLeftSeconds <= 0) {
+                    clearInterval(iv);
+                    // Auto-stop playback when time is up
+                    if (state.isPlaying) {
+                        state.isPlaying = false;
+                        state.currentAudio.pause();
+                        state.music.pause();
+                        document.getElementById('icon-play').classList.remove('hidden');
+                        document.getElementById('icon-pause').classList.add('hidden');
+                    }
+                    return;
+                }
                 if (state.isPlaying) state.timeLeftSeconds--;
                 const h = Math.floor(state.timeLeftSeconds / 3600);
                 const m = Math.floor((state.timeLeftSeconds % 3600) / 60);
