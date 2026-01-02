@@ -211,12 +211,13 @@
         async function initiateSession() {
             const prompt = document.getElementById('prompt-input').value || "In the heart of Twin Souls City...";
             const selectedVoice = document.getElementById('voice-select').value;
-            const voiceConfig = VOICES[selectedVoice];
+            let voiceConfig = VOICES[selectedVoice];
             
-            // Validate voice configuration
+            // Validate voice configuration with fallback
             if (!voiceConfig) {
-                console.error('Invalid voice selection:', selectedVoice);
-                return;
+                console.error('Invalid voice selection:', selectedVoice, '- falling back to default');
+                const defaultVoiceKey = Object.keys(VOICES)[0];
+                voiceConfig = VOICES[defaultVoiceKey];
             }
             
             state.voice = voiceConfig.name;
@@ -309,13 +310,8 @@
             let blob = state.audioBuffer.get(state.currentIndex);
             if (!blob) blob = await fetchTTS(state.sentences[state.currentIndex]);
 
-            // Preload next 2 sentences for seamless playback (only if not already preloading)
-            if (!state.audioBuffer.has(state.currentIndex + 1)) {
-                preloadAudio(state.currentIndex + 1).catch(err => console.error('Preload error:', err));
-            }
-            if (!state.audioBuffer.has(state.currentIndex + 2)) {
-                preloadAudio(state.currentIndex + 2).catch(err => console.error('Preload error:', err));
-            }
+            // Preload next sentences for seamless playback
+            preloadNextSentences(state.currentIndex, 2);
 
             const audioUrl = URL.createObjectURL(blob);
             state.currentAudio.src = audioUrl;
@@ -330,6 +326,7 @@
             
             const onEnded = () => {
                 URL.revokeObjectURL(audioUrl);
+                state.currentAudio.removeEventListener('loadedmetadata', onMetadataLoaded);
                 state.currentAudio.removeEventListener('ended', onEnded);
                 state.currentIndex++;
                 playCycle().catch(err => console.error('Playback cycle error:', err));
@@ -456,6 +453,15 @@
             if (idx >= state.sentences.length || state.audioBuffer.has(idx)) return;
             const b = await fetchTTS(state.sentences[idx]);
             state.audioBuffer.set(idx, b);
+        }
+
+        function preloadNextSentences(currentIdx, count) {
+            for (let i = 1; i <= count; i++) {
+                const nextIdx = currentIdx + i;
+                if (!state.audioBuffer.has(nextIdx)) {
+                    preloadAudio(nextIdx).catch(err => console.error('Preload error:', err));
+                }
+            }
         }
 
         function togglePlayback() {
