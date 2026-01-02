@@ -3,7 +3,11 @@
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no">
-    <!-- Content Security Policy: Allow Spotify SDK and other required sources -->
+    <!-- Content Security Policy: Defines allowed sources for scripts, styles, and other resources
+         IMPORTANT: 'unsafe-eval' is required for Spotify Web Playback SDK to function properly.
+         The Spotify SDK dynamically evaluates JavaScript code for player functionality.
+         'unsafe-inline' is used for inline scripts and styles present in this HTML file.
+         If hosting on a platform with server-side CSP headers, ensure those headers also include 'unsafe-eval'. -->
     <meta http-equiv="Content-Security-Policy" content="
         default-src 'self';
         script-src 'self' 'unsafe-inline' 'unsafe-eval' 
