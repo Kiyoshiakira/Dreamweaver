@@ -172,6 +172,7 @@
 
     <script>
         const apiKey = "";
+        const DEFAULT_ACCENT = 'American';
         const VOICES = {
             'American - Kore (Firm)': { name: 'Kore', accent: 'American' },
             'American - Zephyr (Bright)': { name: 'Zephyr', accent: 'American' },
@@ -211,6 +212,13 @@
             const prompt = document.getElementById('prompt-input').value || "In the heart of Twin Souls City...";
             const selectedVoice = document.getElementById('voice-select').value;
             const voiceConfig = VOICES[selectedVoice];
+            
+            // Validate voice configuration
+            if (!voiceConfig) {
+                console.error('Invalid voice selection:', selectedVoice);
+                return;
+            }
+            
             state.voice = voiceConfig.name;
             state.accent = voiceConfig.accent;
             state.timeLeftSeconds = parseInt(document.getElementById('length-select').value) * 60;
@@ -222,10 +230,12 @@
             // First Chapter
             await generateNextChapter(prompt);
             
-            // Preload first 3 sentences for immediate playback
+            // Preload first 3 sentences for immediate playback in parallel
+            const preloadPromises = [];
             for (let i = 0; i < Math.min(3, state.sentences.length); i++) {
-                await preloadAudio(i);
+                preloadPromises.push(preloadAudio(i));
             }
+            await Promise.all(preloadPromises);
             
             togglePlayback();
         }
@@ -299,30 +309,41 @@
             let blob = state.audioBuffer.get(state.currentIndex);
             if (!blob) blob = await fetchTTS(state.sentences[state.currentIndex]);
 
-            // Preload next 2 sentences for seamless playback
-            preloadAudio(state.currentIndex + 1).catch(err => console.error('Preload error:', err));
-            preloadAudio(state.currentIndex + 2).catch(err => console.error('Preload error:', err));
+            // Preload next 2 sentences for seamless playback (only if not already preloading)
+            if (!state.audioBuffer.has(state.currentIndex + 1)) {
+                preloadAudio(state.currentIndex + 1).catch(err => console.error('Preload error:', err));
+            }
+            if (!state.audioBuffer.has(state.currentIndex + 2)) {
+                preloadAudio(state.currentIndex + 2).catch(err => console.error('Preload error:', err));
+            }
 
-            state.currentAudio.src = URL.createObjectURL(blob);
+            const audioUrl = URL.createObjectURL(blob);
+            state.currentAudio.src = audioUrl;
             
             // Start highlighting and word animation immediately
             highlight(state.currentIndex);
             
-            state.currentAudio.onloadedmetadata = () => {
+            const onMetadataLoaded = () => {
                 animateWords(state.currentIndex);
+                state.currentAudio.removeEventListener('loadedmetadata', onMetadataLoaded);
             };
             
-            state.currentAudio.onended = () => {
+            const onEnded = () => {
+                URL.revokeObjectURL(audioUrl);
+                state.currentAudio.removeEventListener('ended', onEnded);
                 state.currentIndex++;
                 playCycle().catch(err => console.error('Playback cycle error:', err));
             };
+            
+            state.currentAudio.addEventListener('loadedmetadata', onMetadataLoaded);
+            state.currentAudio.addEventListener('ended', onEnded);
             
             // Play immediately without delay
             state.currentAudio.play().catch(err => console.error('Audio playback error:', err));
         }
 
         async function fetchTTS(text) {
-            const accentPrompt = state.accent !== 'American' ? ` Speak with a ${state.accent} accent.` : '';
+            const accentPrompt = state.accent !== DEFAULT_ACCENT ? ` Speak with a ${state.accent} accent.` : '';
             const fullText = text + accentPrompt;
             
             const res = await fetch(`https://generativelanguage.googleapis.com/v1beta/models/gemini-3-flash-preview:generateContent?key=${apiKey}`, {
