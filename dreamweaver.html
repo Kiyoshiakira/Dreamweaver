@@ -363,7 +363,9 @@
             }
 
             // Trigger visual every 4 sentences - use cached images if available
-            if (state.currentIndex % 4 === 0) {
+            // Check if current index aligns with image generation points (every 4 sentences from chapter start)
+            const sentencesIntoChapter = state.currentIndex - state.chapterStartIndex;
+            if (sentencesIntoChapter >= 0 && sentencesIntoChapter % 4 === 0) {
                 if (state.imageCache.has(state.currentIndex)) {
                     displayCachedImage(state.currentIndex);
                 } else {
@@ -465,13 +467,25 @@
                     body: JSON.stringify({ instances: [{ prompt: `Cinematic professional fantasy art, atmospheric, ${state.genre} style: ${context}` }] })
                 });
                 const data = await res.json();
+                
+                // Validate response structure before accessing nested properties
+                if (!data || !data.predictions || !data.predictions[0] || !data.predictions[0].bytesBase64Encoded) {
+                    throw new Error('Invalid API response structure: missing image data');
+                }
+                
                 const img = document.getElementById('scene-image');
                 img.src = `data:image/png;base64,${data.predictions[0].bytesBase64Encoded}`;
                 img.onload = () => {
                     img.classList.remove('opacity-0');
                     document.getElementById('img-overlay').classList.add('opacity-0');
                 };
-            } finally { state.isGeneratingVisual = false; }
+            } catch (err) {
+                console.error('Visual generation error:', err);
+                // Hide overlay on error to avoid blocking the UI
+                document.getElementById('img-overlay').classList.add('opacity-0');
+            } finally { 
+                state.isGeneratingVisual = false; 
+            }
         }
 
         function startTimerDisplay() {
