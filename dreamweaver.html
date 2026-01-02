@@ -356,7 +356,7 @@
                 // Other endpoints return: error.message
                 errorMessage = data.error_description || data.error?.message || data.error || errorMessage;
             } catch (jsonError) {
-                // If parsing JSON fails, use the HTTP status text
+                // If parsing JSON fails (e.g., non-JSON error response), use the HTTP status text as fallback
             }
             return errorMessage;
         }
