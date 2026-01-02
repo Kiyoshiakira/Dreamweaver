@@ -439,12 +439,19 @@
                         }),
                     });
                     
-                    const data = await response.json();
-                    
                     if (!response.ok) {
-                        const errorMessage = data.error_description || data.error || response.statusText;
+                        // Parse error response to get detailed error message
+                        let errorMessage = response.statusText;
+                        try {
+                            const data = await response.json();
+                            errorMessage = data.error_description || data.error || errorMessage;
+                        } catch (jsonError) {
+                            // If parsing JSON fails, use the HTTP status text
+                        }
                         throw new Error(`Spotify authentication failed: ${errorMessage}`);
                     }
+                    
+                    const data = await response.json();
                     
                     if (data.access_token) {
                         state.spotifyAccessToken = data.access_token;
@@ -491,8 +498,18 @@
                 });
                 
                 if (!response.ok) {
-                    const data = await response.json();
-                    const errorMessage = data.error?.message || response.statusText;
+                    // If we can't fetch user info, clear the token as it may be invalid
+                    if (response.status === 401 || response.status === 403) {
+                        logoutSpotify();
+                    }
+                    
+                    let errorMessage = response.statusText;
+                    try {
+                        const data = await response.json();
+                        errorMessage = data.error?.message || errorMessage;
+                    } catch (jsonError) {
+                        // If parsing JSON fails, use the HTTP status text
+                    }
                     throw new Error(`Failed to fetch Spotify user info: ${errorMessage}`);
                 }
                 
@@ -501,10 +518,6 @@
                 localStorage.setItem('spotify_user', JSON.stringify(userData));
             } catch (error) {
                 console.error('Error fetching Spotify user info:', error);
-                // If we can't fetch user info, clear the token as it may be invalid
-                if (error.message.includes('401') || error.message.includes('403')) {
-                    logoutSpotify();
-                }
             }
         }
 
@@ -728,12 +741,19 @@
                     }),
                 });
                 
-                const data = await response.json();
-                
                 if (!response.ok) {
-                    const errorMessage = data.error_description || data.error || response.statusText;
+                    // Parse error response to get detailed error message
+                    let errorMessage = response.statusText;
+                    try {
+                        const data = await response.json();
+                        errorMessage = data.error_description || data.error || errorMessage;
+                    } catch (jsonError) {
+                        // If parsing JSON fails, use the HTTP status text
+                    }
                     throw new Error(`Failed to refresh Spotify token: ${errorMessage}`);
                 }
+                
+                const data = await response.json();
                 
                 if (data.access_token) {
                     state.spotifyAccessToken = data.access_token;
