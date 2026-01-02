@@ -1,0 +1,428 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no">
+    <title>Dreamweaver</title>
+    <script src="https://cdn.tailwindcss.com"></script>
+    <link href="https://fonts.googleapis.com/css2?family=Crimson+Pro:ital,wght@0,400;0,700;1,400&family=Inter:wght@400;700;900&display=swap" rel="stylesheet">
+    
+    <script type="module">
+        import { initializeApp } from "https://www.gstatic.com/firebasejs/11.6.1/firebase-app.js";
+        import { getAuth, signInAnonymously, signInWithCustomToken, onAuthStateChanged } from "https://www.gstatic.com/firebasejs/11.6.1/firebase-auth.js";
+        import { getFirestore, collection, doc, addDoc, getDocs, query, where, onSnapshot, deleteDoc, updateDoc } from "https://www.gstatic.com/firebasejs/11.6.1/firebase-firestore.js";
+
+        const firebaseConfig = JSON.parse(__firebase_config);
+        const app = initializeApp(firebaseConfig);
+        const auth = getAuth(app);
+        const db = getFirestore(app);
+        const appId = typeof __app_id !== 'undefined' ? __app_id : 'narrative-engine-infinite';
+
+        window.fb = { auth, db, appId };
+    </script>
+
+    <style>
+        :root { --bg-deep: #020617; --accent: #6366f1; --text-main: #e2e8f0; }
+        body { background-color: var(--bg-deep); color: var(--text-main); font-family: 'Inter', sans-serif; overflow-x: hidden; }
+        .novel-font { font-family: 'Crimson Pro', serif; }
+        .glass { background: rgba(15, 23, 42, 0.8); backdrop-filter: blur(16px); border: 1px solid rgba(255,255,255,0.08); }
+        .tab-active { background: var(--accent); color: white; }
+        
+        .sentence-span { transition: all 0.6s ease; opacity: 0.15; cursor: pointer; display: inline; }
+        .sentence-active { opacity: 1 !important; color: #1a1a1a !important; font-weight: 700; }
+        
+        .word-token { display: inline-block; padding: 0 1px; border-radius: 4px; }
+        .word-active { background-color: var(--accent) !important; color: white !important; }
+
+        .image-container { 
+            position: sticky; top: 2rem; width: 100%; aspect-ratio: 1/1; 
+            border-radius: 2rem; overflow: hidden; background: #0f172a; 
+            border: 1px solid rgba(255,255,255,0.1); box-shadow: 0 25px 50px -12px rgba(0, 0, 0, 0.5);
+        }
+        .image-container img { width: 100%; height: 100%; object-fit: cover; transition: opacity 1.5s ease; }
+        
+        .timer-glow { text-shadow: 0 0 10px rgba(99, 102, 241, 0.5); }
+    </style>
+</head>
+<body class="selection:bg-indigo-500/30">
+    <div id="app" class="relative z-10 min-h-screen flex flex-col">
+        <nav class="flex items-center justify-between p-6 max-w-7xl mx-auto w-full">
+            <div class="flex items-center gap-3">
+                <div class="w-10 h-10 bg-indigo-600 rounded-xl flex items-center justify-center shadow-lg shadow-indigo-500/20">
+                    <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="white" stroke-width="2.5"><path d="M12 2L2 7l10 5 10-5-10-5zM2 17l10 5 10-5M2 12l10 5 10-5"/></svg>
+                </div>
+                <h1 class="text-xl font-black tracking-tighter uppercase">Infinite<span class="text-indigo-500">Narrator</span></h1>
+            </div>
+            
+            <div id="session-timer" class="hidden glass px-6 py-2 rounded-full border border-indigo-500/30 font-mono text-indigo-400 font-bold timer-glow">
+                00:00:00
+            </div>
+        </nav>
+
+        <!-- Setup Screen -->
+        <main id="view-home" class="flex-1 max-w-3xl mx-auto px-6 py-12 w-full">
+            <div class="glass rounded-[2.5rem] p-10 space-y-10 shadow-2xl border border-white/5">
+                <div class="space-y-4">
+                    <h2 class="text-4xl font-black tracking-tight">System Configuration</h2>
+                    <p class="text-slate-400 text-sm">Set your session parameters for continuous automated narration.</p>
+                </div>
+
+                <div class="grid grid-cols-1 md:grid-cols-2 gap-8">
+                    <!-- Narrator Selection -->
+                    <div class="space-y-2">
+                        <label class="text-indigo-400 text-[11px] font-black uppercase tracking-widest ml-1">Narrator Voice</label>
+                        <select id="voice-select" class="w-full bg-slate-900 border border-white/10 rounded-2xl p-4 text-white appearance-none cursor-pointer hover:bg-slate-800 transition-colors"></select>
+                    </div>
+
+                    <!-- Session Length (Restored & Enhanced) -->
+                    <div class="space-y-2">
+                        <label class="text-indigo-400 text-[11px] font-black uppercase tracking-widest ml-1">Session Duration</label>
+                        <select id="length-select" class="w-full bg-slate-900 border border-white/10 rounded-2xl p-4 text-white appearance-none cursor-pointer">
+                            <option value="5">5 Minutes</option>
+                            <option value="30">30 Minutes</option>
+                            <option value="60">1 Hour</option>
+                            <option value="120">2 Hours</option>
+                        </select>
+                    </div>
+
+                    <!-- Writing Genre -->
+                    <div class="space-y-2">
+                        <label class="text-indigo-400 text-[11px] font-black uppercase tracking-widest ml-1">Narrative Genre</label>
+                        <select id="genre-select" class="w-full bg-slate-900 border border-white/10 rounded-2xl p-4 text-white appearance-none cursor-pointer">
+                            <option value="Fantasy">Fantasy (Necromancy/Twin Souls)</option>
+                            <option value="Sci-Fi">Sci-Fi (Yeet Corp)</option>
+                            <option value="Mystery">Mystery</option>
+                            <option value="Horror">Horror</option>
+                            <option value="Drama">Historical Drama</option>
+                        </select>
+                    </div>
+
+                    <!-- Intelligent Score -->
+                    <div class="space-y-2">
+                        <label class="text-indigo-400 text-[11px] font-black uppercase tracking-widest ml-1">Score Dynamics</label>
+                        <div class="flex items-center gap-4 bg-slate-900 border border-white/10 rounded-2xl p-4">
+                            <span class="text-[10px] text-slate-500 uppercase font-bold">Static</span>
+                            <input type="range" id="score-sensitivity" class="flex-1 accent-indigo-500" min="1" max="5" value="3">
+                            <span class="text-[10px] text-slate-500 uppercase font-bold">Fluid</span>
+                        </div>
+                    </div>
+                </div>
+                
+                <div class="space-y-2">
+                    <label class="text-indigo-400 text-[11px] font-black uppercase tracking-widest ml-1">Initial Premise</label>
+                    <textarea id="prompt-input" class="w-full bg-slate-900 border border-white/10 rounded-3xl p-6 text-white h-40 focus:ring-2 ring-indigo-500 outline-none resize-none text-lg leading-relaxed" placeholder="Twin Souls City, the river split, Kretia's harvest..."></textarea>
+                </div>
+
+                <button id="start-btn" onclick="initiateSession()" class="w-full py-6 bg-indigo-600 rounded-2xl font-black text-xl shadow-xl hover:bg-indigo-500 transition-all active:scale-[0.98] uppercase tracking-widest">
+                    Begin Narration Loop
+                </button>
+            </div>
+        </main>
+
+        <!-- Reader Screen -->
+        <main id="view-reader" class="hidden flex-1 max-w-7xl mx-auto px-4 py-6 w-full pb-48">
+            <div class="grid grid-cols-1 lg:grid-cols-12 gap-10">
+                <div class="lg:col-span-7 bg-[#fafaf9] text-[#1c1917] novel-font rounded-[3rem] shadow-2xl flex flex-col min-h-[85vh] border border-stone-200 overflow-hidden">
+                    <div id="scroll-target" class="p-12 md:p-20 flex-1 overflow-y-auto">
+                        <div id="vibe-badge" class="inline-block px-4 py-1 rounded-full bg-indigo-100 text-indigo-700 text-[10px] font-black uppercase tracking-widest mb-6 transition-all opacity-0">...</div>
+                        <h1 id="reader-title" class="text-5xl font-bold mb-10 tracking-tight text-stone-900 italic">Initializing...</h1>
+                        <div id="reader-content" class="text-[24px] md:text-[28px] leading-[1.7] text-stone-700 space-y-8"></div>
+                    </div>
+                </div>
+
+                <div class="lg:col-span-5 space-y-8">
+                    <div class="image-container">
+                        <div id="img-overlay" class="absolute inset-0 bg-black/60 flex flex-col items-center justify-center opacity-0 transition-opacity z-10 backdrop-blur-sm">
+                            <div class="w-10 h-10 border-2 border-white/20 border-t-white rounded-full animate-spin mb-3"></div>
+                            <span class="text-[10px] font-bold text-white uppercase tracking-widest">Generating Scene</span>
+                        </div>
+                        <img id="scene-image" src="" class="opacity-0">
+                    </div>
+                    
+                    <div class="glass p-8 rounded-[2.5rem] space-y-6">
+                        <div class="flex items-center justify-between">
+                            <div class="flex items-center gap-4">
+                                <div class="w-12 h-12 bg-indigo-500/20 rounded-2xl flex items-center justify-center text-indigo-400">
+                                    <svg width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M9 18V5l12-2v13"></path><circle cx="6" cy="18" r="3"></circle><circle cx="18" cy="16" r="3"></circle></svg>
+                                </div>
+                                <div>
+                                    <p class="text-white font-black text-sm uppercase tracking-wider">Dynamic Score</p>
+                                    <p id="music-status" class="text-indigo-300 text-xs">Analyzing Prose...</p>
+                                </div>
+                            </div>
+                            <div id="genre-icon" class="text-2xl">✨</div>
+                        </div>
+                        <input type="range" id="music-vol" min="0" max="0.5" step="0.01" value="0.15" class="w-full accent-indigo-500">
+                    </div>
+                </div>
+            </div>
+        </main>
+
+        <div id="control-panel" class="hidden fixed bottom-10 left-1/2 -translate-x-1/2 w-[90%] max-w-2xl glass rounded-[2.5rem] p-5 shadow-2xl z-50 flex items-center gap-8 border border-white/10">
+            <button onclick="togglePlayback()" class="w-16 h-16 bg-white rounded-3xl flex items-center justify-center text-indigo-900 shadow-xl hover:scale-105 active:scale-95 transition-all">
+                <svg id="icon-play" width="32" height="32" viewBox="0 0 24 24" fill="currentColor"><path d="M8 5v14l11-7z"></path></svg>
+                <svg id="icon-pause" class="hidden" width="32" height="32" viewBox="0 0 24 24" fill="currentColor"><path d="M6 19h4V5H6v14zm8-14v14h4V5h-4z"></path></svg>
+            </button>
+            <div class="flex-1 overflow-hidden">
+                <div class="text-[10px] font-black text-indigo-400 uppercase tracking-widest mb-1">Live Feed</div>
+                <div id="current-word" class="text-xl font-black text-white truncate italic">...</div>
+            </div>
+        </div>
+    </div>
+
+    <script>
+        const apiKey = "";
+        const VOICES = ['Kore', 'Zephyr', 'Puck', 'Fenrir', 'Despina', 'Enceladus', 'Algieba', 'Charon'];
+        const SCORE_LIBRARY = {
+            whimsical: { name: "Whimsical Fantasy", icon: "🪄", url: 'https://www.soundhelix.com/examples/mp3/SoundHelix-Song-16.mp3' },
+            noir: { name: "Noir Mystery", icon: "🕵️", url: 'https://www.soundhelix.com/examples/mp3/SoundHelix-Song-3.mp3' },
+            epic: { name: "High Adventure", icon: "⚔️", url: 'https://www.soundhelix.com/examples/mp3/SoundHelix-Song-8.mp3' },
+            horror: { name: "Dark Suspense", icon: "🌑", url: 'https://www.soundhelix.com/examples/mp3/SoundHelix-Song-2.mp3' },
+            scifi: { name: "Sci-Fi Ambient", icon: "🚀", url: 'https://www.soundhelix.com/examples/mp3/SoundHelix-Song-1.mp3' },
+            dramatic: { name: "Heavy Drama", icon: "🎭", url: 'https://www.soundhelix.com/examples/mp3/SoundHelix-Song-10.mp3' }
+        };
+
+        const state = {
+            isPlaying: false,
+            sentences: [],
+            currentIndex: 0,
+            voice: 'Kore',
+            timeLeftSeconds: 0,
+            genre: '',
+            history: [],
+            audioBuffer: new Map(),
+            currentAudio: new Audio(),
+            music: new Audio(),
+            isGeneratingChapter: false,
+            isGeneratingVisual: false
+        };
+
+        async function initiateSession() {
+            const prompt = document.getElementById('prompt-input').value || "In the heart of Twin Souls City...";
+            state.voice = document.getElementById('voice-select').value;
+            state.timeLeftSeconds = parseInt(document.getElementById('length-select').value) * 60;
+            state.genre = document.getElementById('genre-select').value;
+            
+            switchView('reader');
+            startTimerDisplay();
+            
+            // First Chapter
+            await generateNextChapter(prompt);
+            togglePlayback();
+        }
+
+        async function generateNextChapter(seedPrompt) {
+            if (state.isGeneratingChapter) return;
+            state.isGeneratingChapter = true;
+            
+            const sys = `You are a professional novelist writing a ${state.genre} story. 
+            The session has ${Math.ceil(state.timeLeftSeconds / 60)} minutes remaining.
+            Continue the story based on history. If this is the start, use the prompt.
+            Output JSON: { "title": "Chapter Title", "prose": "About 400 words of story", "score_type": "epic/horror/noir/scifi/whimsical/dramatic" }`;
+
+            try {
+                const res = await fetch(`https://generativelanguage.googleapis.com/v1beta/models/gemini-2.5-flash-preview-09-2025:generateContent?key=${apiKey}`, {
+                    method: 'POST',
+                    headers: { 'Content-Type': 'application/json' },
+                    body: JSON.stringify({
+                        contents: [{ parts: [{ text: `History: ${state.history.join(' ')}\n\nCurrent Focus: ${seedPrompt}` }] }],
+                        systemInstruction: { parts: [{ text: sys }] },
+                        generationConfig: { responseMimeType: "application/json" }
+                    })
+                });
+                const data = await res.json();
+                const result = JSON.parse(data.candidates[0].content.parts[0].text);
+                
+                state.history.push(result.prose);
+                appendChapter(result);
+                applyScore(result.score_type);
+            } finally {
+                state.isGeneratingChapter = false;
+            }
+        }
+
+        function appendChapter(data) {
+            const container = document.getElementById('reader-content');
+            const chapterSents = data.prose.match(/[^.!?]+[.!?]+(?=\s|$)/g) || [data.prose];
+            const startIdx = state.sentences.length;
+            
+            document.getElementById('reader-title').innerText = data.title;
+            
+            chapterSents.forEach((text, i) => {
+                const globalIdx = startIdx + i;
+                const span = document.createElement('span');
+                span.id = `s-${globalIdx}`;
+                span.className = 'sentence-span';
+                text.split(/\s+/).forEach((word, wi) => {
+                    const wSpan = document.createElement('span');
+                    wSpan.className = 'word-token';
+                    wSpan.id = `s-${globalIdx}-w-${wi}`;
+                    wSpan.innerText = word + ' ';
+                    span.appendChild(wSpan);
+                });
+                container.appendChild(span);
+                state.sentences.push(text);
+            });
+        }
+
+        async function playCycle() {
+            if (!state.isPlaying || state.currentIndex >= state.sentences.length) {
+                if (state.timeLeftSeconds > 0 && !state.isGeneratingChapter) {
+                    await generateNextChapter("Continue the narrative smoothly.");
+                    playCycle();
+                }
+                return;
+            }
+
+            // Trigger visual every 4 sentences
+            if (state.currentIndex % 4 === 0) updateVisual(state.currentIndex);
+
+            let blob = state.audioBuffer.get(state.currentIndex);
+            if (!blob) blob = await fetchTTS(state.sentences[state.currentIndex]);
+
+            state.currentAudio.src = URL.createObjectURL(blob);
+            state.currentAudio.onplay = () => {
+                highlight(state.currentIndex);
+                animateWords(state.currentIndex);
+                preloadAudio(state.currentIndex + 1);
+            };
+            state.currentAudio.onended = () => {
+                state.currentIndex++;
+                playCycle();
+            };
+            state.currentAudio.play();
+        }
+
+        async function fetchTTS(text) {
+            const res = await fetch(`https://generativelanguage.googleapis.com/v1beta/models/gemini-2.5-flash-preview-tts:generateContent?key=${apiKey}`, {
+                method: 'POST',
+                headers: { 'Content-Type': 'application/json' },
+                body: JSON.stringify({
+                    contents: [{ parts: [{ text }] }],
+                    generationConfig: { 
+                        responseModalities: ["AUDIO"], 
+                        speechConfig: { voiceConfig: { prebuiltVoiceConfig: { voiceName: state.voice } } } 
+                    }
+                })
+            });
+            const data = await res.json();
+            return base64ToWav(data.candidates[0].content.parts[0].inlineData.data, 24000);
+        }
+
+        function base64ToWav(base64, rate) {
+            const bin = atob(base64);
+            const buf = new ArrayBuffer(bin.length);
+            const view = new Uint8Array(buf);
+            for (let i = 0; i < bin.length; i++) view[i] = bin.charCodeAt(i);
+            const header = new ArrayBuffer(44);
+            const hView = new DataView(header);
+            const writeStr = (off, s) => { for (let i = 0; i < s.length; i++) hView.setUint8(off + i, s.charCodeAt(i)); };
+            writeStr(0, 'RIFF'); hView.setUint32(4, 36 + buf.byteLength, true); writeStr(8, 'WAVE'); writeStr(12, 'fmt ');
+            hView.setUint32(16, 16, true); hView.setUint16(20, 1, true); hView.setUint16(22, 1, true); hView.setUint32(24, rate, true);
+            hView.setUint32(28, rate * 2, true); hView.setUint16(32, 2, true); hView.setUint16(34, 16, true); writeStr(36, 'data');
+            hView.setUint32(40, buf.byteLength, true);
+            return new Blob([header, buf], { type: 'audio/wav' });
+        }
+
+        async function updateVisual(idx) {
+            if (state.isGeneratingVisual) return;
+            state.isGeneratingVisual = true;
+            document.getElementById('img-overlay').classList.remove('opacity-0');
+            const context = state.sentences.slice(idx, idx+2).join(' ');
+            try {
+                const res = await fetch(`https://generativelanguage.googleapis.com/v1beta/models/imagen-4.0-generate-001:predict?key=${apiKey}`, {
+                    method: 'POST',
+                    headers: { 'Content-Type': 'application/json' },
+                    body: JSON.stringify({ instances: [{ prompt: `Cinematic professional fantasy art, atmospheric, ${state.genre} style: ${context}` }] })
+                });
+                const data = await res.json();
+                const img = document.getElementById('scene-image');
+                img.src = `data:image/png;base64,${data.predictions[0].bytesBase64Encoded}`;
+                img.onload = () => {
+                    img.classList.remove('opacity-0');
+                    document.getElementById('img-overlay').classList.add('opacity-0');
+                };
+            } finally { state.isGeneratingVisual = false; }
+        }
+
+        function startTimerDisplay() {
+            const el = document.getElementById('session-timer');
+            el.classList.remove('hidden');
+            const iv = setInterval(() => {
+                if (state.timeLeftSeconds <= 0) { clearInterval(iv); return; }
+                if (state.isPlaying) state.timeLeftSeconds--;
+                const h = Math.floor(state.timeLeftSeconds / 3600);
+                const m = Math.floor((state.timeLeftSeconds % 3600) / 60);
+                const s = state.timeLeftSeconds % 60;
+                el.innerText = `${h.toString().padStart(2,'0')}:${m.toString().padStart(2,'0')}:${s.toString().padStart(2,'0')}`;
+            }, 1000);
+        }
+
+        function highlight(idx) {
+            document.querySelectorAll('.sentence-span').forEach((el, i) => {
+                el.classList.toggle('sentence-active', i === idx);
+                if (i === idx) el.scrollIntoView({ behavior: 'smooth', block: 'center' });
+            });
+        }
+
+        function animateWords(sIdx) {
+            const words = state.sentences[sIdx].split(/\s+/);
+            const duration = state.currentAudio.duration || 2;
+            const step = (duration * 1000) / words.length;
+            let w = 0;
+            const iv = setInterval(() => {
+                if (!state.isPlaying || w >= words.length) { clearInterval(iv); return; }
+                document.querySelectorAll('.word-active').forEach(e => e.classList.remove('word-active'));
+                const el = document.getElementById(`s-${sIdx}-w-${w}`);
+                if (el) {
+                    el.classList.add('word-active');
+                    document.getElementById('current-word').innerText = words[w];
+                }
+                w++;
+            }, step);
+        }
+
+        function applyScore(type) {
+            const track = SCORE_LIBRARY[type] || SCORE_LIBRARY.dramatic;
+            if (state.music.src !== track.url) {
+                state.music.src = track.url;
+                state.music.loop = true;
+                state.music.play();
+            }
+            const badge = document.getElementById('vibe-badge');
+            badge.innerText = `Atmosphere: ${track.name}`;
+            badge.classList.remove('opacity-0');
+            document.getElementById('music-status').innerText = track.name;
+            document.getElementById('genre-icon').innerText = track.icon;
+        }
+
+        async function preloadAudio(idx) {
+            if (idx >= state.sentences.length || state.audioBuffer.has(idx)) return;
+            const b = await fetchTTS(state.sentences[idx]);
+            state.audioBuffer.set(idx, b);
+        }
+
+        function togglePlayback() {
+            state.isPlaying = !state.isPlaying;
+            document.getElementById('icon-play').classList.toggle('hidden', state.isPlaying);
+            document.getElementById('icon-pause').classList.toggle('hidden', !state.isPlaying);
+            if (state.isPlaying) { state.music.play(); playCycle(); } 
+            else { state.currentAudio.pause(); state.music.pause(); }
+        }
+
+        function switchView(v) {
+            document.getElementById('view-home').classList.toggle('hidden', v !== 'home');
+            document.getElementById('view-reader').classList.toggle('hidden', v !== 'reader');
+            document.getElementById('control-panel').classList.toggle('hidden', v !== 'reader');
+        }
+
+        window.onload = () => {
+            const vs = document.getElementById('voice-select');
+            VOICES.forEach(v => {
+                const o = document.createElement('option'); o.value = v; o.textContent = v;
+                vs.appendChild(o);
+            });
+        };
+    </script>
+</body>
+</html>
