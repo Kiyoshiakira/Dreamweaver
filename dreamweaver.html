@@ -213,6 +213,8 @@
             averageSentencesPerChapter: 12,
             // Minimum time buffer: Require at least half a chapter's duration before generating next chapter
             minTimeBufferRatio: 0.5,
+            // Retry delay: Wait 5 seconds before allowing retry after failed generation to avoid rapid retries
+            retryDelayMs: 5000,
             nextChapterTriggered: false
         };
 
@@ -325,8 +327,9 @@
             // Trigger next chapter generation when halfway through current chapter
             // This allows AI to write while reading
             // Only trigger once per chapter to avoid duplicate generation requests
+            // Require at least 2 sentences in chapter to avoid edge cases with very short chapters
             if (!state.nextChapterTriggered && 
-                sentencesInCurrentChapter > 0 && 
+                sentencesInCurrentChapter >= 2 && 
                 sentencesLeftInChapter > 0 &&
                 sentencesLeftInChapter <= Math.floor(sentencesInCurrentChapter / 2)) {
                 if (shouldGenerateNextChapter()) {
@@ -337,7 +340,7 @@
                         console.error('Context: Chapter generation failed mid-reading. System will retry when current chapter completes.');
                         // Note: If generation fails, the system will retry when playCycle reaches end of current chapter
                         // Reset flag after a delay to avoid rapid retries
-                        setTimeout(() => { state.nextChapterTriggered = false; }, 5000);
+                        setTimeout(() => { state.nextChapterTriggered = false; }, state.retryDelayMs);
                     });
                 }
             }
