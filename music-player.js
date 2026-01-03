@@ -44,6 +44,35 @@ const MusicPlayer = (function () {
     document.getElementById('local-files-input').style.display = s === 'local' ? 'inline-block' : 'none';
     document.getElementById('youtube-url-input').style.display = s === 'youtube' ? 'inline-block' : 'none';
     document.getElementById('youtube-load-btn').style.display = s === 'youtube' ? 'inline-block' : 'none';
+    
+    // Show/hide source-specific track info displays
+    const spotifyTrackInfo = document.getElementById('spotify-track-info');
+    const youtubeTrackInfo = document.getElementById('youtube-track-info');
+    const localTrackList = document.getElementById('local-track-list');
+    
+    if (spotifyTrackInfo) {
+      spotifyTrackInfo.style.display = s === 'spotify' ? 'block' : 'none';
+    }
+    if (youtubeTrackInfo) {
+      youtubeTrackInfo.style.display = s === 'youtube' ? 'block' : 'none';
+    }
+    
+    // Update local track list display
+    if (s === 'local') {
+      updateAvailableTracksUI();
+    }
+
+    // Update music source display on reader page
+    const musicSourceDisplay = document.getElementById('music-source-display');
+    if (musicSourceDisplay) {
+      if (s === 'spotify') {
+        musicSourceDisplay.textContent = 'Source: Spotify';
+      } else if (s === 'local') {
+        musicSourceDisplay.textContent = 'Source: Local Files';
+      } else if (s === 'youtube') {
+        musicSourceDisplay.textContent = 'Source: YouTube';
+      }
+    }
 
     if (s !== 'local') pauseLocal();
     if (s !== 'youtube') pauseYouTube();
@@ -92,12 +121,23 @@ const MusicPlayer = (function () {
 
   function playLocal(idx = localIndex) {
     if (!localTracks.length) return;
+    // Validate index is within bounds
+    if (idx < 0 || idx >= localTracks.length) {
+      console.warn(`Invalid local track index: ${idx}, resetting to 0`);
+      idx = 0;
+    }
     const audio = prepareLocalAudio(idx);
     localIndex = idx;
     if (audioCtx && audioCtx.state === 'suspended') audioCtx.resume().catch(err => console.warn('Failed to resume AudioContext:', err));
     audio.volume = 1.0;
     audio.play().catch(err => console.warn('Local audio play failed:', err));
     localAudio = audio;
+    
+    // Update music status display
+    const musicStatus = document.getElementById('music-status');
+    if (musicStatus) {
+      musicStatus.textContent = localTracks[idx].name;
+    }
   }
   function pauseLocal() { if (localAudio) localAudio.pause(); }
   function nextLocal() {
@@ -127,6 +167,14 @@ const MusicPlayer = (function () {
 
   async function loadYouTubeAndPlay(videoId) {
     await loadYouTubeApi();
+    
+    // Add to queue if not already there
+    if (!ytQueue.includes(videoId)) {
+      ytQueue.push(videoId);
+    }
+    // Set index to the position of this video
+    ytIndex = ytQueue.indexOf(videoId);
+    
     if (!ytPlayer) {
       const div = document.createElement('div');
       div.id = 'yt-player';
@@ -138,12 +186,38 @@ const MusicPlayer = (function () {
         videoId: videoId,
         playerVars: { 'autoplay': 1, 'controls': 0, 'modestbranding': 1 },
         events: {
-          'onReady': (e) => { e.target.playVideo(); },
+          'onReady': (e) => { 
+            e.target.playVideo();
+            // Update music status display
+            const musicStatus = document.getElementById('music-status');
+            if (musicStatus) {
+              musicStatus.textContent = `Video ID: ${videoId}`;
+            }
+            // Update YouTube track info on front page
+            const ytTrackName = document.getElementById('youtube-track-name');
+            if (ytTrackName) {
+              ytTrackName.textContent = `Loaded: ${videoId} - Ready to play`;
+              ytTrackName.classList.remove('text-slate-400');
+              ytTrackName.classList.add('text-green-400');
+            }
+          },
           'onStateChange': (e) => { if (e.data === YT.PlayerState.ENDED) nextYouTube(); }
         }
       });
     } else {
       ytPlayer.loadVideoById(videoId);
+      // Update music status display
+      const musicStatus = document.getElementById('music-status');
+      if (musicStatus) {
+        musicStatus.textContent = `Video ID: ${videoId}`;
+      }
+      // Update YouTube track info on front page
+      const ytTrackName = document.getElementById('youtube-track-name');
+      if (ytTrackName) {
+        ytTrackName.textContent = `Loaded: ${videoId} - Ready to play`;
+        ytTrackName.classList.remove('text-slate-400');
+        ytTrackName.classList.add('text-green-400');
+      }
     }
     setSource('youtube');
   }
@@ -186,13 +260,56 @@ const MusicPlayer = (function () {
     const listEl = document.getElementById('local-track-list');
     if (!listEl) return;
     listEl.innerHTML = '';
+    
+    if (localTracks.length === 0) {
+      // Show message when local files selected but no files loaded
+      if (source === 'local') {
+        const msg = document.createElement('div');
+        msg.className = 'mt-3 p-3 bg-slate-800 border border-blue-500/30 rounded-xl text-sm text-slate-300';
+        msg.innerHTML = `
+          <div class="flex items-center gap-2 mb-1">
+            <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
+              <path d="M9 18V5l12-2v13"></path>
+              <circle cx="6" cy="18" r="3"></circle>
+              <circle cx="18" cy="16" r="3"></circle>
+            </svg>
+            <span class="font-bold text-white">Local Files Selected</span>
+          </div>
+          <div class="text-xs text-slate-400">Click the file input above to select audio files from your computer</div>
+        `;
+        listEl.appendChild(msg);
+      }
+      return;
+    }
+    
+    // Show loaded files with a header
+    const container = document.createElement('div');
+    container.className = 'mt-3 p-3 bg-slate-800 border border-blue-500/30 rounded-xl text-sm text-slate-300';
+    
+    const header = document.createElement('div');
+    header.className = 'flex items-center gap-2 mb-2';
+    header.innerHTML = `
+      <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
+        <path d="M9 18V5l12-2v13"></path>
+        <circle cx="6" cy="18" r="3"></circle>
+        <circle cx="18" cy="16" r="3"></circle>
+      </svg>
+      <span class="font-bold text-white">Local Files Loaded (${localTracks.length})</span>
+    `;
+    container.appendChild(header);
+    
+    const tracksContainer = document.createElement('div');
+    tracksContainer.className = 'space-y-1';
     localTracks.forEach((t, i) => {
       const li = document.createElement('div');
+      li.className = 'text-xs text-slate-400 hover:text-white cursor-pointer px-2 py-1 rounded hover:bg-slate-700 transition-colors';
       li.textContent = `${i+1}. ${t.name}`;
-      li.style.cursor = 'pointer';
       li.onclick = () => { playLocal(i); };
-      listEl.appendChild(li);
+      tracksContainer.appendChild(li);
     });
+    
+    container.appendChild(tracksContainer);
+    listEl.appendChild(container);
   }
 
   return {
@@ -203,6 +320,6 @@ const MusicPlayer = (function () {
     next,
     setVolume,
     loadYouTubeAndPlay,
-    _debugState: () => ({ source, localTracks, localIndex, ytQueue }),
+    _debugState: () => ({ source, localTracks, localIndex, ytQueue, ytIndex }),
   };
 })();
