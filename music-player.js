@@ -94,7 +94,7 @@ const MusicPlayer = (function () {
     if (!localTracks.length) return;
     const audio = prepareLocalAudio(idx);
     localIndex = idx;
-    if (audioCtx && audioCtx.state === 'suspended') audioCtx.resume().catch(()=>{});
+    if (audioCtx && audioCtx.state === 'suspended') audioCtx.resume().catch(err => console.warn('Failed to resume AudioContext:', err));
     audio.volume = 1.0;
     audio.play().catch(err => console.warn('Local audio play failed:', err));
     localAudio = audio;
@@ -107,7 +107,7 @@ const MusicPlayer = (function () {
   }
   function cleanupLocal() {
     localTracks.forEach(t => {
-      try { URL.revokeObjectURL(t.url); } catch {}
+      try { URL.revokeObjectURL(t.url); } catch (e) { console.warn('Failed to revoke URL:', e); }
       if (t.audioEl) { t.audioEl.pause(); t.audioEl.src = ''; }
     });
     localTracks = [];
