@@ -19,7 +19,8 @@
             https://www.google.com 
             https://www.google.com/recaptcha/ 
             https://*.googletagmanager.com 
-            https://accounts.scdn.co;
+            https://accounts.scdn.co
+            https://www.youtube.com;
         style-src 'self' 'unsafe-inline' 
             https://cdn.tailwindcss.com 
             https://fonts.googleapis.com;
@@ -33,7 +34,7 @@
             https://firebasestorage.googleapis.com 
             https://*.googleapis.com;
         media-src 'self' https: blob:;
-        frame-src https://accounts.spotify.com;
+        frame-src https://accounts.spotify.com https://www.youtube.com https://www.youtube-nocookie.com;
     ">
     <title>Dreamweaver</title>
     <!-- Note: Tailwind CDN is used for development convenience. For production deployment,
@@ -194,6 +195,28 @@
                                 <button onclick="logoutSpotify()" class="text-xs text-slate-400 hover:text-white transition-colors">Disconnect</button>
                             </div>
                         </div>
+                    </div>
+                </div>
+
+                <!-- Music Player Controls -->
+                <div id="music-source-controls" class="space-y-2 p-6 bg-slate-900/50 border border-indigo-500/20 rounded-2xl">
+                    <div class="space-y-3">
+                        <label class="text-indigo-400 text-[11px] font-black uppercase tracking-widest">Background Music Player</label>
+                        <div class="flex flex-wrap items-center gap-3">
+                            <select id="music-source-select" aria-label="Music Source" class="bg-slate-900 border border-white/10 rounded-xl px-4 py-2 text-white text-sm appearance-none cursor-pointer hover:bg-slate-800 transition-colors">
+                                <option value="spotify">Spotify</option>
+                                <option value="local">Local Files</option>
+                                <option value="youtube">YouTube</option>
+                            </select>
+
+                            <input id="local-files-input" type="file" accept="audio/*" multiple style="display:none;" class="text-sm text-slate-400 file:mr-4 file:py-2 file:px-4 file:rounded-xl file:border-0 file:text-sm file:font-semibold file:bg-indigo-600 file:text-white hover:file:bg-indigo-500" />
+                            
+                            <input id="youtube-url-input" type="text" placeholder="Paste YouTube URL or ID" style="display:none;" class="bg-slate-900 border border-white/10 rounded-xl px-4 py-2 text-white text-sm flex-1 min-w-[280px]" />
+                            
+                            <button id="youtube-load-btn" style="display:none;" class="px-4 py-2 bg-indigo-600 hover:bg-indigo-500 rounded-xl font-bold text-sm transition-all active:scale-95">Load</button>
+                        </div>
+
+                        <div id="local-track-list" class="space-y-1 text-sm text-slate-300"></div>
                     </div>
                 </div>
                 
@@ -1490,6 +1513,18 @@
             handleSpotifyCallback();
             restoreSpotifySession();
         };
+    </script>
+    
+    <!-- Music Player Module -->
+    <script src="music-player.js"></script>
+    <script>
+        document.addEventListener('DOMContentLoaded', () => {
+            MusicPlayer.init();
+            
+            // Note: Play/pause buttons for the story narration are handled separately
+            // The music-player.js controls background music only and does not interfere
+            // with the main story playback controls (togglePlayback, etc.)
+        });
     </script>
 </body>
 
