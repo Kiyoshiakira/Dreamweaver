@@ -269,6 +269,8 @@ For more detailed documentation, please visit the [Wiki](../../wiki):
 
 - [x] Spotify integration for personalized music selection
 - [x] Change song feature to switch tracks while maintaining mood
+- [x] Local file upload for custom audio tracks
+- [x] YouTube integration for video audio playback
 - [ ] Expand default music library with more genre-specific tracks
 - [ ] Full Spotify Web Playback SDK integration for complete track playback
 - [ ] Add user story saving/loading functionality

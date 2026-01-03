@@ -223,7 +223,43 @@ Complete guide for using Dreamweaver, from first launch to advanced tips and tro
 
 *Note: This feature is UI-only in current version; future updates will fully integrate with music engine.*
 
-### Step 5: Write Your Prompt
+### Step 5: Select Music Source (Optional)
+
+**Three music sources available**:
+
+#### 🎵 **Spotify** (Recommended)
+- **Setup**: Click "Connect Spotify" button to link your account
+- **Benefits**: Access to millions of tracks with AI-powered selection
+- **Features**: 
+  - Automatically matches tracks to story mood
+  - "Change Song" button to switch tracks while keeping the same genre
+  - Falls back to default library if not connected
+- **Requirements**: Free or premium Spotify account
+
+#### 📁 **Local Files**
+- **Setup**: Click on file input to select audio files from your device
+- **Formats**: MP3, OGG, WAV, and other browser-supported formats
+- **Features**:
+  - Upload multiple files that play in sequence
+  - Complete control over music selection
+  - Enhanced volume control and crossfade
+- **Note**: Files are not saved between sessions
+
+#### 📺 **YouTube**
+- **Setup**: Paste a YouTube URL or video ID and click "Load"
+- **Features**:
+  - Stream audio from any YouTube video
+  - Background playback via IFrame API
+- **Notes**: 
+  - May show ads before playback
+  - Requires user gesture for autoplay
+  - Best used with music videos or ambient sound tracks
+
+**Switching Sources**:
+- You can change music sources at any time using the dropdown selector
+- Different sources can be used for different moods or preferences
+
+### Step 6: Write Your Prompt
 
 **What makes a good prompt?**
 
@@ -280,7 +316,7 @@ choose between her duty and her conscience as bombers
 circle overhead.
 ```
 
-### Step 6: Click "Begin Story"
+### Step 7: Click "Begin Story"
 
 Once you click:
 1. ⏳ Screen transitions to reader view
@@ -340,10 +376,20 @@ Once you click:
 
 ### Music Controls
 
+**Music Source Selector**:
+- Dropdown to switch between Spotify, Local Files, and YouTube
+- Can be changed during playback without interruption
+- Shows current source (e.g., "Source: Spotify")
+
 **Current Track Display**:
 - Shows track name and icon
-- Updates when mood shifts
+- Updates when mood shifts (default library) or song changes (Spotify)
 - Icon indicates mood (⚔️ epic, 🌑 horror, etc.)
+
+**Change Song Button** (Spotify only):
+- Available when using Spotify as music source
+- Click to request a different track while maintaining the same mood/genre
+- Keeps story immersion while providing variety
 
 **Volume Slider**:
 - Range: 0% to 50%
@@ -352,9 +398,9 @@ Once you click:
 - Changes take effect immediately
 
 **Track Changes**:
-- Music may transition between chapters
-- Based on keyword analysis of prose
+- Music may transition between chapters (default library)
 - Smooth fade between tracks
+- Spotify searches for new tracks based on detected story mood
 
 ### Timer Display
 
@@ -652,7 +698,16 @@ A: Yes, but requires code modifications. The architecture supports swapping prov
 ### Features
 
 **Q: Can I upload my own music?**  
-A: Not directly. You can edit the `SCORE_LIBRARY` object to add URLs to your own hosted MP3 files.
+A: Yes! Use the "Local Files" music source option to upload your own audio files (MP3, OGG, WAV, etc.). Simply select the files from your device and they'll play in sequence. Note that files are not saved between browser sessions.
+
+**Q: Can I use Spotify with Dreamweaver?**  
+A: Yes! Click "Connect Spotify" to link your account. The app will intelligently select tracks from Spotify based on your story's mood and genre. You can also use the "Change Song" button to switch tracks while maintaining the same vibe.
+
+**Q: Does Spotify integration require a premium account?**  
+A: No, both free and premium Spotify accounts work. However, some tracks may not have preview URLs available.
+
+**Q: Can I use YouTube videos as background music?**  
+A: Yes! Select "YouTube" as your music source, paste a video URL or ID, and click "Load". The audio will stream in the background via YouTube's IFrame API.
 
 **Q: Can I train my own voice?**  
 A: Not currently. Gemini uses prebuilt voices. Custom voice training would require a different TTS provider.

@@ -733,17 +733,22 @@ const SCORE_LIBRARY = {
 - **Google Gemini API** (v1beta) - Story & TTS
 - **Google Imagen API** (4.0) - Image generation
 - **Firebase** (11.6.1) - Optional user management
+- **Spotify Web API** - Optional music integration
+- **Spotify Web Playback SDK** - Optional music playback
 
 ### CDN Resources
 - **Tailwind CSS** - UI framework
 - **Google Fonts** - Crimson Pro, Inter
 - **Firebase SDK** - ES modules from gstatic
+- **Spotify Web Playback SDK** - Loaded dynamically when needed
+- **YouTube IFrame API** - Loaded dynamically for YouTube playback
 
 ### Browser APIs
-- **Web Audio API** - Audio playback
+- **Web Audio API** - Audio playback and processing
 - **Fetch API** - Network requests
 - **URL API** - Blob URL management
 - **DOM API** - UI manipulation
+- **File API** - Local file handling
 
 ---
 
