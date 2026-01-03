@@ -350,14 +350,23 @@
                                 <div class="w-12 h-12 bg-indigo-500/20 rounded-2xl flex items-center justify-center text-indigo-400">
                                     <svg width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M9 18V5l12-2v13"></path><circle cx="6" cy="18" r="3"></circle><circle cx="18" cy="16" r="3"></circle></svg>
                                 </div>
-                                <div>
+                                <div class="flex-1 min-w-0">
                                     <p class="text-white font-black text-sm uppercase tracking-wider">Dynamic Score</p>
-                                    <p id="music-status" class="text-indigo-300 text-xs">Analyzing Prose...</p>
+                                    <p id="music-status" class="text-indigo-300 text-xs truncate">Analyzing Prose...</p>
+                                    <p id="music-source-display" class="text-slate-400 text-[10px] mt-1">Source: Default</p>
                                 </div>
                             </div>
                             <div id="genre-icon" class="text-2xl">✨</div>
                         </div>
-                        <input type="range" id="music-vol" min="0" max="0.5" step="0.01" value="0.15" class="w-full accent-indigo-500">
+                        <div class="space-y-2">
+                            <label class="text-indigo-400 text-[10px] font-bold uppercase tracking-wider">Music Volume</label>
+                            <input type="range" id="music-vol" min="0" max="0.5" step="0.01" value="0.15" class="w-full accent-indigo-500">
+                        </div>
+                        
+                        <div class="space-y-2">
+                            <label class="text-indigo-400 text-[10px] font-bold uppercase tracking-wider">Narrator Volume</label>
+                            <input type="range" id="narrator-vol" min="0" max="1" step="0.05" value="1" class="w-full accent-indigo-500">
+                        </div>
                         
                         <!-- Change Song Button -->
                         <button id="change-song-btn" onclick="changeSong()" class="w-full py-3 bg-slate-700 hover:bg-slate-600 rounded-2xl font-bold text-sm transition-all active:scale-95 flex items-center justify-center gap-2">
@@ -748,8 +757,12 @@
                     
                     // Update UI
                     const musicStatus = document.getElementById('music-status');
+                    const musicSourceDisplay = document.getElementById('music-source-display');
                     if (musicStatus) {
                         musicStatus.textContent = `${track.name} - ${track.artists[0].name}`;
+                    }
+                    if (musicSourceDisplay) {
+                        musicSourceDisplay.textContent = `Source: Spotify`;
                     }
                     
                     if (state.isPlaying) {
@@ -941,21 +954,39 @@
             // Sync reader voice selector with initial selection
             document.getElementById('voice-select-reader').value = selectedVoice;
             
-            switchView('reader');
-            startTimerDisplay();
+            // Show loading state
+            const startBtn = document.getElementById('start-btn');
+            startBtn.disabled = true;
+            startBtn.textContent = 'Generating Story...';
             
-            // First Chapter
-            await generateNextChapter(prompt);
-            
-            // Preload first 3 sentences for immediate playback in parallel
-            const preloadPromises = [];
-            for (let i = 0; i < Math.min(3, state.sentences.length); i++) {
-                preloadPromises.push(preloadAudio(i));
+            try {
+                // First Chapter - wait for complete generation
+                await generateNextChapter(prompt);
+                
+                // Update button to show audio generation
+                startBtn.textContent = 'Preparing Narrator...';
+                
+                // Preload first 3 sentences for immediate playback in parallel
+                const preloadPromises = [];
+                for (let i = 0; i < Math.min(3, state.sentences.length); i++) {
+                    preloadPromises.push(preloadAudio(i));
+                }
+                await Promise.all(preloadPromises);
+                
+                // Switch to reader view
+                switchView('reader');
+                startTimerDisplay();
+                
+                // Auto-start playback immediately for instant narration
+                togglePlayback();
+                
+                console.log('Story started with instant narration.');
+            } catch (error) {
+                console.error('Failed to start session:', error);
+                startBtn.disabled = false;
+                startBtn.textContent = 'Begin Story';
+                alert('Failed to start story session. Please try again.');
             }
-            await Promise.all(preloadPromises);
-            
-            // Don't auto-start playback - wait for user to press play button
-            console.log('Story ready. Press play to begin.');
         }
 
         async function generateNextChapter(seedPrompt) {
@@ -1092,6 +1123,12 @@
 
             const audioUrl = URL.createObjectURL(blob);
             state.currentAudio.src = audioUrl;
+            
+            // Apply narrator volume
+            const narratorVolControl = document.getElementById('narrator-vol');
+            if (narratorVolControl) {
+                state.currentAudio.volume = parseFloat(narratorVolControl.value) || 1;
+            }
             
             // Start highlighting and word animation immediately
             highlight(state.currentIndex);
@@ -1272,7 +1309,30 @@
             const badge = document.getElementById('vibe-badge');
             badge.innerText = `Atmosphere: ${track.name}`;
             badge.classList.remove('opacity-0');
-            document.getElementById('music-status').innerText = track.name;
+            const musicStatus = document.getElementById('music-status');
+            const musicSourceDisplay = document.getElementById('music-source-display');
+            const musicSource = document.getElementById('music-source-select')?.value || 'spotify';
+            
+            if (musicSource === 'spotify' || state.isUsingSpotify) {
+                // Show Spotify track name if available
+                if (state.currentSpotifyTrack) {
+                    musicStatus.innerText = `${state.currentSpotifyTrack.name}`;
+                    if (musicSourceDisplay) musicSourceDisplay.innerText = `Source: Spotify`;
+                } else {
+                    musicStatus.innerText = track.name;
+                    if (musicSourceDisplay) musicSourceDisplay.innerText = `Source: Default`;
+                }
+            } else if (musicSource === 'local') {
+                musicStatus.innerText = track.name;
+                if (musicSourceDisplay) musicSourceDisplay.innerText = `Source: Local Files`;
+            } else if (musicSource === 'youtube') {
+                musicStatus.innerText = track.name;
+                if (musicSourceDisplay) musicSourceDisplay.innerText = `Source: YouTube`;
+            } else {
+                musicStatus.innerText = track.name;
+                if (musicSourceDisplay) musicSourceDisplay.innerText = `Source: Default`;
+            }
+            
             document.getElementById('genre-icon').innerText = track.icon;
         }
 
@@ -1484,6 +1544,11 @@
                     // Use MusicPlayer for local/YouTube
                     if (typeof MusicPlayer !== 'undefined') {
                         MusicPlayer.play();
+                        // Sync volume from music volume slider
+                        const volControl = document.getElementById('music-vol');
+                        if (volControl) {
+                            MusicPlayer.setVolume(parseFloat(volControl.value) * 2);
+                        }
                     }
                 }
                 playCycle().catch(err => console.error('Playback cycle error:', err)); 
@@ -1628,9 +1693,23 @@
                 state.music.volume = validateVolume(volControl.value);
                 volControl.addEventListener('input', (e) => {
                     state.music.volume = validateVolume(e.target.value);
+                    // Also update MusicPlayer volume if using local/YouTube
+                    const musicSource = document.getElementById('music-source-select')?.value || 'spotify';
+                    if (musicSource !== 'spotify' && typeof MusicPlayer !== 'undefined') {
+                        MusicPlayer.setVolume(validateVolume(e.target.value) * 2); // Scale for MusicPlayer
+                    }
                 });
             } else {
                 state.music.volume = DEFAULT_VOLUME;
+            }
+            
+            // Connect narrator volume control
+            const narratorVolControl = document.getElementById('narrator-vol');
+            if (narratorVolControl) {
+                narratorVolControl.addEventListener('input', (e) => {
+                    const volume = parseFloat(e.target.value);
+                    state.currentAudio.volume = isNaN(volume) ? 1 : Math.max(0, Math.min(1, volume));
+                });
             }
             
             // Initialize Spotify

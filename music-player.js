@@ -45,6 +45,18 @@ const MusicPlayer = (function () {
     document.getElementById('youtube-url-input').style.display = s === 'youtube' ? 'inline-block' : 'none';
     document.getElementById('youtube-load-btn').style.display = s === 'youtube' ? 'inline-block' : 'none';
 
+    // Update music source display on reader page
+    const musicSourceDisplay = document.getElementById('music-source-display');
+    if (musicSourceDisplay) {
+      if (s === 'spotify') {
+        musicSourceDisplay.textContent = 'Source: Spotify';
+      } else if (s === 'local') {
+        musicSourceDisplay.textContent = 'Source: Local Files';
+      } else if (s === 'youtube') {
+        musicSourceDisplay.textContent = 'Source: YouTube';
+      }
+    }
+
     if (s !== 'local') pauseLocal();
     if (s !== 'youtube') pauseYouTube();
   }
@@ -98,6 +110,12 @@ const MusicPlayer = (function () {
     audio.volume = 1.0;
     audio.play().catch(err => console.warn('Local audio play failed:', err));
     localAudio = audio;
+    
+    // Update music status display
+    const musicStatus = document.getElementById('music-status');
+    if (musicStatus) {
+      musicStatus.textContent = localTracks[idx].name;
+    }
   }
   function pauseLocal() { if (localAudio) localAudio.pause(); }
   function nextLocal() {
@@ -138,12 +156,24 @@ const MusicPlayer = (function () {
         videoId: videoId,
         playerVars: { 'autoplay': 1, 'controls': 0, 'modestbranding': 1 },
         events: {
-          'onReady': (e) => { e.target.playVideo(); },
+          'onReady': (e) => { 
+            e.target.playVideo();
+            // Update music status display
+            const musicStatus = document.getElementById('music-status');
+            if (musicStatus) {
+              musicStatus.textContent = `Video ID: ${videoId}`;
+            }
+          },
           'onStateChange': (e) => { if (e.data === YT.PlayerState.ENDED) nextYouTube(); }
         }
       });
     } else {
       ytPlayer.loadVideoById(videoId);
+      // Update music status display
+      const musicStatus = document.getElementById('music-status');
+      if (musicStatus) {
+        musicStatus.textContent = `Video ID: ${videoId}`;
+      }
     }
     setSource('youtube');
   }
