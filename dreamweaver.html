@@ -148,6 +148,18 @@
         .star-size-medium { width: 2px; height: 2px; }
         .star-size-large { width: 3px; height: 3px; }
         
+        .shoot-slow { animation-duration: 5s; }
+        .shoot-medium { animation-duration: 3.5s; }
+        .shoot-fast { animation-duration: 2s; }
+        .shoot-delay-1 { animation-delay: 0s; }
+        .shoot-delay-2 { animation-delay: 3s; }
+        .shoot-delay-3 { animation-delay: 6s; }
+        .shoot-delay-4 { animation-delay: 9s; }
+        .shoot-delay-5 { animation-delay: 12s; }
+        .shoot-width-small { width: 50px; }
+        .shoot-width-medium { width: 100px; }
+        .shoot-width-large { width: 150px; }
+        
         .shooting-star {
             position: absolute;
             height: 2px;
@@ -1671,6 +1683,10 @@
             
             // Create shooting stars
             const shootingStarCount = 5;
+            const shootSpeeds = ['shoot-slow', 'shoot-medium', 'shoot-fast'];
+            const shootDelays = ['shoot-delay-1', 'shoot-delay-2', 'shoot-delay-3', 'shoot-delay-4', 'shoot-delay-5'];
+            const shootWidths = ['shoot-width-small', 'shoot-width-medium', 'shoot-width-large'];
+            
             for (let i = 0; i < shootingStarCount; i++) {
                 const shootingStar = document.createElement('div');
                 shootingStar.className = 'shooting-star';
@@ -1679,14 +1695,10 @@
                 shootingStar.style.left = Math.random() * 50 + '%';
                 shootingStar.style.top = Math.random() * 50 + '%';
                 
-                // Random width (50-150px)
-                shootingStar.style.width = (Math.random() * 100 + 50) + 'px';
-                
-                // Random animation duration (2-5 seconds)
-                shootingStar.style.animationDuration = (Math.random() * 3 + 2) + 's';
-                
-                // Random delay so they don't all shoot at once
-                shootingStar.style.animationDelay = (Math.random() * 10) + 's';
+                // Add predefined classes for performance
+                shootingStar.classList.add(shootWidths[Math.floor(Math.random() * shootWidths.length)]);
+                shootingStar.classList.add(shootSpeeds[Math.floor(Math.random() * shootSpeeds.length)]);
+                shootingStar.classList.add(shootDelays[i % shootDelays.length]); // Ensure even distribution
                 
                 starfield.appendChild(shootingStar);
             }
