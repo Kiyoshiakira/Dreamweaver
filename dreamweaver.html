@@ -517,7 +517,9 @@
             spotifyDeviceId: null,
             isUsingSpotify: false,
             currentSpotifyTrack: null,
-            availableSpotifyTracks: []
+            availableSpotifyTracks: [],
+            // Music source selection: tracks currently selected music source for synchronization
+            musicSource: 'spotify'
         };
 
         // Spotify Authentication Functions
@@ -953,6 +955,20 @@
         }
 
 
+        // Helper function to synchronize music source to MusicPlayer module
+        function syncMusicSourceToPlayer(source) {
+            if (typeof MusicPlayer !== 'undefined' && MusicPlayer.setSource) {
+                MusicPlayer.setSource(source);
+            } else if (typeof MusicPlayer !== 'undefined') {
+                // Fallback: dispatch change event on the select element for MusicPlayer.attachUI to pick up
+                const musicSourceSelect = document.getElementById('music-source-select');
+                if (musicSourceSelect) {
+                    const changeEvent = new Event('change', { bubbles: true });
+                    musicSourceSelect.dispatchEvent(changeEvent);
+                }
+            }
+        }
+
         async function initiateSession() {
             const prompt = document.getElementById('prompt-input').value || "Tell me an interesting story.";
             const selectedVoice = document.getElementById('voice-select').value;
@@ -975,6 +991,12 @@
             
             // Capture selected music source from front page
             const selectedMusicSource = document.getElementById('music-source-select')?.value || 'spotify';
+            
+            // Synchronize state.musicSource with selected value
+            state.musicSource = selectedMusicSource;
+            
+            // Propagate music source to MusicPlayer module
+            syncMusicSourceToPlayer(state.musicSource);
             
             // Show loading state
             const startBtn = document.getElementById('start-btn');
@@ -1818,6 +1840,22 @@
     <script>
         document.addEventListener('DOMContentLoaded', () => {
             MusicPlayer.init();
+            
+            // Synchronize music source selection on app startup
+            const musicSourceSelect = document.getElementById('music-source-select');
+            if (musicSourceSelect) {
+                // Initialize state.musicSource from the select element
+                state.musicSource = musicSourceSelect.value || 'spotify';
+                
+                // Apply initial source to MusicPlayer using shared helper function
+                syncMusicSourceToPlayer(state.musicSource);
+                
+                // Add change listener to keep state.musicSource and MusicPlayer synchronized
+                musicSourceSelect.addEventListener('change', (e) => {
+                    state.musicSource = e.target.value;
+                    syncMusicSourceToPlayer(state.musicSource);
+                });
+            }
             
             // Note: Play/pause buttons for the story narration are handled separately
             // The music-player.js controls background music only and does not interfere
