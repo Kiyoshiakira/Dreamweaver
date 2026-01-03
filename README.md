@@ -55,11 +55,21 @@ Dreamweaver is a single-page web application that combines multiple AI technolog
 - **Session Duration**: 5 minutes to 2 hours of continuous storytelling
 - **Score Dynamics**: Adjustable music sensitivity (static to fluid)
 - **Volume Control**: Independent music volume adjustment
-- **🎵 Spotify Integration**: Connect your Spotify account for personalized music selection
-  - Log in with your Spotify account to access millions of tracks
-  - AI intelligently selects tracks based on story mood and genre
-  - Change songs on-the-fly while maintaining the same mood/genre
-  - Seamlessly fallback to default music library when not logged in
+- **🎵 Multiple Music Sources**:
+  - **Spotify Integration**: Connect your Spotify account for personalized music selection
+    - Log in with your Spotify account to access millions of tracks
+    - AI intelligently selects tracks based on story mood and genre
+    - Change songs on-the-fly while maintaining the same mood/genre
+    - Seamlessly fallback to default music library when not logged in
+  - **Local Files**: Upload your own audio files (MP3, OGG, etc.)
+    - Select multiple audio files from your device
+    - Files play in sequence with automatic progression
+    - **Note**: Local files are not persisted across browser sessions
+    - Supports Web Audio API for enhanced volume control and crossfade
+  - **YouTube**: Play audio from YouTube videos
+    - Paste a YouTube URL or video ID
+    - Background audio playback via YouTube IFrame API
+    - **Note**: YouTube may show ads; requires user gesture for autoplay
 
 ---
 
@@ -96,7 +106,13 @@ Dreamweaver is a single-page web application that combines multiple AI technolog
    - **Important**: The Spotify Web Playback SDK requires `'unsafe-eval'` in the Content Security Policy. The HTML file includes a CSP meta tag with this directive. If you're hosting on a platform that sets server-side CSP headers, ensure those headers also include `'unsafe-eval'` in the `script-src` directive.
 
 4. **Run the Application**:
-   Simply open `dreamweaver.html` in your web browser, or serve it using a local web server:
+   **⚠️ Important**: It is strongly recommended to serve the application using a local HTTP server rather than opening the HTML file directly (`file://`). This prevents issues with:
+   - Cross-origin requests for SDK scripts (Spotify, YouTube)
+   - IFrame postMessage restrictions
+   - OAuth redirect URIs
+   - Modern browser security policies
+   
+   Serve using one of these methods:
    ```bash
    # Using Python
    python -m http.server 8000
@@ -106,7 +122,7 @@ Dreamweaver is a single-page web application that combines multiple AI technolog
    ```
 
 5. **Access the App**:
-   Navigate to `http://localhost:8000` (or open the HTML file directly)
+   Navigate to `http://localhost:8000/dreamweaver.html` in your web browser
 
 ---
 
@@ -118,15 +134,19 @@ Dreamweaver is a single-page web application that combines multiple AI technolog
 2. **Set Session Duration**: Pick how long you want the story to continue (5 min - 2 hours)
 3. **Choose a Genre**: Select Fantasy, Sci-Fi, Mystery, Horror, or Historical Drama
 4. **Adjust Score Dynamics**: Control how dynamically the music changes (1-5 scale)
-5. **Connect Spotify (Optional)**: Click "Connect Spotify" to link your account for personalized music
+5. **Select Music Source**:
+   - **Spotify**: Click "Connect Spotify" to link your account for personalized music (optional)
+   - **Local Files**: Click on the file input to select audio files from your device
+   - **YouTube**: Paste a YouTube URL or video ID and click "Load"
 6. **Enter Your Prompt**: Describe the story you want to hear in the text area
 7. **Click "Begin Story"**: Sit back and enjoy your personalized narrative experience
 
 ### During Playback
 
-- **Play/Pause**: Use the large circular button at the bottom center
-- **Change Song**: Click the "Change Song" button in the music panel to switch to a different track while keeping the same mood/genre
+- **Play/Pause**: Use the large circular button at the bottom center to control both narration and music playback
+- **Change Song**: Click the "Change Song" button in the music panel to switch to a different track (Spotify mode only)
 - **Volume Control**: Adjust music volume with the slider in the right panel
+- **Switch Music Source**: Change between Spotify, Local Files, and YouTube at any time using the dropdown selector
 - **Visual Sync**: Watch as images change every 4 sentences
 - **Word Tracking**: Follow along with real-time word highlighting
 - **Timer**: Monitor remaining session time in the top-right corner
