@@ -156,7 +156,10 @@ const MusicPlayer = (function () {
     try {
       if (urlOrId.length === 11 && /^[A-Za-z0-9_-]+$/.test(urlOrId)) return urlOrId;
       const u = new URL(urlOrId);
-      if (u.hostname.includes('youtube.com')) return u.searchParams.get('v');
+      // Strict hostname validation to prevent malicious domains
+      if (u.hostname === 'www.youtube.com' || u.hostname === 'youtube.com' || u.hostname === 'm.youtube.com') {
+        return u.searchParams.get('v');
+      }
       if (u.hostname === 'youtu.be') return u.pathname.slice(1);
     } catch (e) {
       if (urlOrId.length === 11) return urlOrId;
