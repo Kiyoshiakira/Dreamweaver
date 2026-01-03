@@ -1572,14 +1572,17 @@
                         // Sync volume from music volume slider
                         const volControl = document.getElementById('music-vol');
                         if (volControl) {
-                            MusicPlayer.setVolume(parseFloat(volControl.value) * 2);
+                            const MUSIC_PLAYER_VOLUME_SCALE = 2; // Scale factor for MusicPlayer volume
+                            MusicPlayer.setVolume(parseFloat(volControl.value) * MUSIC_PLAYER_VOLUME_SCALE);
                         }
                     }
                 }
                 playCycle().catch(err => console.error('Playback cycle error:', err)); 
             } 
             else { 
-                state.currentAudio.pause(); 
+                if (state.currentAudio) {
+                    state.currentAudio.pause();
+                }
                 // Pause music based on selected source
                 const musicSource = document.getElementById('music-source-select')?.value || 'spotify';
                 if (musicSource === 'spotify' || state.isUsingSpotify) {
@@ -1595,7 +1598,9 @@
         function stopPlayback() {
             // Stop playback
             state.isPlaying = false;
-            state.currentAudio.pause();
+            if (state.currentAudio) {
+                state.currentAudio.pause();
+            }
             
             // Pause music based on selected source
             const musicSource = document.getElementById('music-source-select')?.value || 'spotify';
@@ -1699,9 +1704,16 @@
             if (source === 'local' && typeof MusicPlayer !== 'undefined') {
                 const debugState = MusicPlayer._debugState();
                 if (debugState.localTracks && debugState.localTracks.length > 0) {
-                    const currentTrack = debugState.localTracks[debugState.localIndex];
-                    musicStatus.textContent = currentTrack ? currentTrack.name : 'Local Files Ready';
-                    musicSourceDisplay.textContent = 'Source: Local Files';
+                    const idx = debugState.localIndex;
+                    // Validate index is within bounds
+                    if (idx >= 0 && idx < debugState.localTracks.length) {
+                        const currentTrack = debugState.localTracks[idx];
+                        musicStatus.textContent = currentTrack ? currentTrack.name : 'Local Files Ready';
+                        musicSourceDisplay.textContent = 'Source: Local Files';
+                    } else {
+                        musicStatus.textContent = 'Local Files Ready';
+                        musicSourceDisplay.textContent = 'Source: Local Files';
+                    }
                 } else {
                     musicStatus.textContent = 'No local files loaded';
                     musicSourceDisplay.textContent = 'Source: Local Files (None Loaded)';
@@ -1709,9 +1721,17 @@
             } else if (source === 'youtube' && typeof MusicPlayer !== 'undefined') {
                 const debugState = MusicPlayer._debugState();
                 if (debugState.ytQueue && debugState.ytQueue.length > 0) {
-                    const currentVideoId = debugState.ytQueue[debugState.ytIndex || 0];
-                    musicStatus.textContent = `Video ID: ${currentVideoId}`;
-                    musicSourceDisplay.textContent = 'Source: YouTube';
+                    const idx = debugState.ytIndex || 0;
+                    // Validate index is within bounds
+                    if (idx >= 0 && idx < debugState.ytQueue.length) {
+                        const currentVideoId = debugState.ytQueue[idx];
+                        musicStatus.textContent = `Video ID: ${currentVideoId}`;
+                        musicSourceDisplay.textContent = 'Source: YouTube';
+                    } else {
+                        // Fallback to first video if index is invalid
+                        musicStatus.textContent = `Video ID: ${debugState.ytQueue[0]}`;
+                        musicSourceDisplay.textContent = 'Source: YouTube';
+                    }
                 } else {
                     // Check if a video was loaded (check YouTube input)
                     const ytInput = document.getElementById('youtube-url-input');
@@ -1766,7 +1786,8 @@
                     // Also update MusicPlayer volume if using local/YouTube
                     const musicSource = document.getElementById('music-source-select')?.value || 'spotify';
                     if (musicSource !== 'spotify' && typeof MusicPlayer !== 'undefined') {
-                        MusicPlayer.setVolume(validateVolume(e.target.value) * 2); // Scale for MusicPlayer
+                        const MUSIC_PLAYER_VOLUME_SCALE = 2; // Scale factor for MusicPlayer volume
+                        MusicPlayer.setVolume(validateVolume(e.target.value) * MUSIC_PLAYER_VOLUME_SCALE);
                     }
                 });
             } else {

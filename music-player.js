@@ -121,6 +121,11 @@ const MusicPlayer = (function () {
 
   function playLocal(idx = localIndex) {
     if (!localTracks.length) return;
+    // Validate index is within bounds
+    if (idx < 0 || idx >= localTracks.length) {
+      console.warn(`Invalid local track index: ${idx}, resetting to 0`);
+      idx = 0;
+    }
     const audio = prepareLocalAudio(idx);
     localIndex = idx;
     if (audioCtx && audioCtx.state === 'suspended') audioCtx.resume().catch(err => console.warn('Failed to resume AudioContext:', err));
@@ -166,8 +171,9 @@ const MusicPlayer = (function () {
     // Add to queue if not already there
     if (!ytQueue.includes(videoId)) {
       ytQueue.push(videoId);
-      ytIndex = ytQueue.length - 1;
     }
+    // Set index to the position of this video
+    ytIndex = ytQueue.indexOf(videoId);
     
     if (!ytPlayer) {
       const div = document.createElement('div');
