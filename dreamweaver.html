@@ -136,6 +136,18 @@
             50% { opacity: 1; transform: scale(1.2); }
         }
         
+        /* Predefined animation classes for better performance */
+        .star-slow { animation-duration: 8s; }
+        .star-medium { animation-duration: 5s; }
+        .star-fast { animation-duration: 3s; }
+        .star-delay-1 { animation-delay: 0s; }
+        .star-delay-2 { animation-delay: 1s; }
+        .star-delay-3 { animation-delay: 2s; }
+        .star-delay-4 { animation-delay: 3s; }
+        .star-size-small { width: 1px; height: 1px; }
+        .star-size-medium { width: 2px; height: 2px; }
+        .star-size-large { width: 3px; height: 3px; }
+        
         .shooting-star {
             position: absolute;
             height: 2px;
@@ -145,10 +157,10 @@
         }
         
         @keyframes shoot {
-            0% { opacity: 0; transform: translateX(-100px) translateY(-100px); }
+            0% { opacity: 0; transform: translateX(-10vw) translateY(-10vh); }
             10% { opacity: 1; }
             90% { opacity: 1; }
-            100% { opacity: 0; transform: translateX(1000px) translateY(1000px); }
+            100% { opacity: 0; transform: translateX(100vw) translateY(100vh); }
         }
         
         .moon {
@@ -1634,6 +1646,11 @@
             const starfield = document.getElementById('starfield');
             if (!starfield) return;
             
+            // Predefined classes for performance
+            const sizes = ['star-size-small', 'star-size-medium', 'star-size-large'];
+            const speeds = ['star-slow', 'star-medium', 'star-fast'];
+            const delays = ['star-delay-1', 'star-delay-2', 'star-delay-3', 'star-delay-4'];
+            
             // Create regular stars
             const starCount = 200;
             for (let i = 0; i < starCount; i++) {
@@ -1644,16 +1661,10 @@
                 star.style.left = Math.random() * 100 + '%';
                 star.style.top = Math.random() * 100 + '%';
                 
-                // Random size (1-3px)
-                const size = Math.random() * 2 + 1;
-                star.style.width = size + 'px';
-                star.style.height = size + 'px';
-                
-                // Random animation duration (2-8 seconds)
-                star.style.animationDuration = (Math.random() * 6 + 2) + 's';
-                
-                // Random animation delay for staggered effect
-                star.style.animationDelay = (Math.random() * 4) + 's';
+                // Add random predefined classes
+                star.classList.add(sizes[Math.floor(Math.random() * sizes.length)]);
+                star.classList.add(speeds[Math.floor(Math.random() * speeds.length)]);
+                star.classList.add(delays[Math.floor(Math.random() * delays.length)]);
                 
                 starfield.appendChild(star);
             }
