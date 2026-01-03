@@ -164,7 +164,7 @@
             position: absolute;
             height: 2px;
             background: linear-gradient(to right, rgba(255, 255, 255, 0), rgba(255, 255, 255, 1), rgba(255, 255, 255, 0));
-            animation: shoot 3s linear infinite;
+            animation: shoot linear infinite;
             opacity: 0;
         }
         
@@ -185,7 +185,7 @@
             background: linear-gradient(135deg, #fef9e7 0%, #f7dc6f 50%, #f4d03f 100%);
             box-shadow: 0 0 60px rgba(247, 220, 111, 0.6), 
                         inset -20px -20px 40px rgba(0, 0, 0, 0.1);
-            z-index: 1;
+            z-index: 5;
             animation: moon-glow 4s ease-in-out infinite;
         }
         
@@ -1698,7 +1698,7 @@
                 // Add predefined classes for performance
                 shootingStar.classList.add(shootWidths[Math.floor(Math.random() * shootWidths.length)]);
                 shootingStar.classList.add(shootSpeeds[Math.floor(Math.random() * shootSpeeds.length)]);
-                shootingStar.classList.add(shootDelays[i % shootDelays.length]); // Ensure even distribution
+                shootingStar.classList.add(shootDelays[i % shootDelays.length]); // Distribute delays sequentially for consistent spacing
                 
                 starfield.appendChild(shootingStar);
             }
