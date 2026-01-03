@@ -57,7 +57,8 @@ const MusicPlayer = (function () {
     if (youtubeTrackInfo) {
       youtubeTrackInfo.style.display = 'none';
     }
-    if (localTrackList) {
+    // Clear local track list only when switching away from local source
+    if (localTrackList && s !== 'local') {
       localTrackList.innerHTML = '';
     }
     
