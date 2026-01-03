@@ -220,6 +220,36 @@
             </div>
         </nav>
 
+        <!-- File Protocol Warning Banner -->
+        <div id="file-protocol-warning" class="hidden mx-auto max-w-7xl px-6 mb-4">
+            <div class="bg-yellow-900/30 border border-yellow-500/50 rounded-2xl p-4 backdrop-blur-sm">
+                <div class="flex items-start gap-3">
+                    <svg class="w-6 h-6 text-yellow-400 flex-shrink-0 mt-0.5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                        <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M12 9v2m0 4h.01m-6.938 4h13.856c1.54 0 2.502-1.667 1.732-3L13.732 4c-.77-1.333-2.694-1.333-3.464 0L3.34 16c-.77 1.333.192 3 1.732 3z"/>
+                    </svg>
+                    <div class="flex-1 min-w-0">
+                        <h3 class="text-yellow-400 font-bold text-sm mb-1">⚠️ Running from file:// protocol</h3>
+                        <p class="text-yellow-200/80 text-xs leading-relaxed mb-2">
+                            You're opening this app directly from your filesystem. This can cause issues with:
+                            Spotify SDK postMessage origins, YouTube IFrame API, API CORS restrictions, and OAuth redirects.
+                        </p>
+                        <div class="bg-slate-900/50 rounded-lg p-2 font-mono text-xs text-yellow-100">
+                            <div class="text-yellow-400 font-bold mb-1">Recommended: Serve over HTTP</div>
+                            <div class="text-slate-300">python -m http.server 8000</div>
+                            <div class="text-slate-400 text-[10px] mt-1">Then visit: http://localhost:8000/dreamweaver.html</div>
+                        </div>
+                    </div>
+                    <button onclick="document.getElementById('file-protocol-warning').classList.add('hidden')" 
+                            class="text-yellow-400 hover:text-yellow-300 transition-colors p-1" 
+                            title="Dismiss warning">
+                        <svg class="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                            <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M6 18L18 6M6 6l12 12"/>
+                        </svg>
+                    </button>
+                </div>
+            </div>
+        </div>
+
         <!-- Setup Screen -->
         <main id="view-home" class="flex-1 max-w-3xl mx-auto px-6 py-12 w-full">
             <div class="glass rounded-[2.5rem] p-10 space-y-10 shadow-2xl border border-white/5">
@@ -1030,9 +1060,76 @@
                 console.log('Story started with instant narration.');
             } catch (error) {
                 console.error('Failed to start session:', error);
+                
+                // Instead of aborting, provide a fallback demo chapter
+                // This allows users to still experience the music player and visuals
+                console.log('Generating fallback demo chapter due to API failure...');
+                
+                // Create fallback demo chapter with 4-6 sentences
+                const fallbackChapter = {
+                    title: "Demo: A Moonlit Journey",
+                    prose: "The night was alive with whispers of ancient magic. Stars danced across the velvet sky, painting stories of forgotten realms. A lone traveler stood at the crossroads, gazing up at the silver moon. The wind carried secrets from distant lands, weaving through the trees like a gentle song. In this moment, time itself seemed to pause, holding its breath. The journey ahead would be filled with wonder and mystery.",
+                    score_type: state.genre.toLowerCase() === 'fantasy' ? 'whimsical' : 
+                               state.genre.toLowerCase() === 'sci-fi' ? 'scifi' : 
+                               state.genre.toLowerCase() === 'mystery' ? 'noir' : 
+                               state.genre.toLowerCase() === 'horror' ? 'horror' : 'dramatic',
+                    key_visual_moments: [
+                        "A lone traveler at a mystical crossroads under a moonlit sky",
+                        "Stars painting stories across the velvet night"
+                    ]
+                };
+                
+                // Populate state with fallback chapter
+                appendChapter(fallbackChapter);
+                
+                // Apply appropriate music score
+                applyScore(fallbackChapter.score_type);
+                
+                // Switch to reader view to show the demo content
+                switchView('reader');
+                startTimerDisplay();
+                
+                // Update music display
+                updateMusicDisplayForSource(selectedMusicSource);
+                
+                // Restore start button state
                 startBtn.disabled = false;
                 startBtn.textContent = 'Begin Story';
-                alert('Failed to start story session. Please try again.');
+                
+                // Display user-friendly error message explaining the failure
+                let errorMessage = '⚠️ Story Generation Failed\n\n';
+                
+                // Provide specific guidance based on error type
+                if (error.message && error.message.includes('403')) {
+                    errorMessage += 'API Key Issue: The API key may be invalid, expired, or restricted.\n\n';
+                    errorMessage += 'Possible causes:\n';
+                    errorMessage += '• API key is restricted to specific domains/IPs\n';
+                    errorMessage += '• API key has insufficient permissions\n';
+                    errorMessage += '• API quota has been exceeded\n\n';
+                } else if (error.message && (error.message.includes('CORS') || error.message.includes('fetch'))) {
+                    errorMessage += 'Network Issue: Unable to reach the generation API.\n\n';
+                } else {
+                    errorMessage += 'An unexpected error occurred during generation.\n\n';
+                }
+                
+                // Add file:// protocol specific guidance
+                if (window.location.protocol === 'file:') {
+                    errorMessage += '⚠️ IMPORTANT: You are running this app via file:// protocol.\n';
+                    errorMessage += 'This can cause API restrictions and CORS issues.\n\n';
+                    errorMessage += 'Please serve the app over HTTP instead:\n';
+                    errorMessage += '  python -m http.server 8000\n';
+                    errorMessage += '  Then visit: http://localhost:8000/dreamweaver.html\n\n';
+                }
+                
+                errorMessage += 'A demo chapter has been loaded so you can explore the music player and visuals.\n';
+                errorMessage += 'Fix the API configuration to enable full story generation.';
+                
+                // Show error message in alert (non-blocking)
+                alert(errorMessage);
+                
+                // Also log friendly message to console
+                console.log('Fallback demo chapter loaded. Music and TTS controls are available.');
+                console.log('Error details:', error.message || error);
             }
         }
 
@@ -1777,6 +1874,26 @@
         }
 
         window.onload = () => {
+            // Check for file:// protocol and show warning banner
+            if (window.location.protocol === 'file:') {
+                const warningBanner = document.getElementById('file-protocol-warning');
+                if (warningBanner) {
+                    warningBanner.classList.remove('hidden');
+                }
+                
+                // Also log to console
+                console.warn('⚠️ Running from file:// protocol detected!');
+                console.warn('This may cause issues with:');
+                console.warn('  • Spotify Web Playback SDK postMessage origin errors');
+                console.warn('  • YouTube IFrame API restrictions');
+                console.warn('  • API CORS/referrer restrictions');
+                console.warn('  • OAuth redirect URIs');
+                console.warn('');
+                console.warn('Recommended: Serve over HTTP using:');
+                console.warn('  python -m http.server 8000');
+                console.warn('  Then visit: http://localhost:8000/dreamweaver.html');
+            }
+            
             const vs = document.getElementById('voice-select');
             const vsReader = document.getElementById('voice-select-reader');
             Object.keys(VOICES).forEach(label => {
