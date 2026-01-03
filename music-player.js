@@ -196,7 +196,8 @@ const MusicPlayer = (function () {
         playerVars: { 'autoplay': 0, 'controls': 0, 'modestbranding': 1 },
         events: {
           'onReady': (e) => { 
-            // Don't auto-play - wait for user to press play button
+            // Use cueVideoById to load without playing
+            ytPlayer.cueVideoById(videoId);
             // Update music status display
             const musicStatus = document.getElementById('music-status');
             if (musicStatus) {
@@ -214,7 +215,8 @@ const MusicPlayer = (function () {
         }
       });
     } else {
-      ytPlayer.loadVideoById(videoId);
+      // Use cueVideoById instead of loadVideoById to prevent auto-play
+      ytPlayer.cueVideoById(videoId);
       // Update music status display
       const musicStatus = document.getElementById('music-status');
       if (musicStatus) {
