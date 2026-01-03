@@ -50,15 +50,23 @@ const MusicPlayer = (function () {
     const youtubeTrackInfo = document.getElementById('youtube-track-info');
     const localTrackList = document.getElementById('local-track-list');
     
+    // Hide all track info displays first
     if (spotifyTrackInfo) {
-      spotifyTrackInfo.style.display = s === 'spotify' ? 'block' : 'none';
+      spotifyTrackInfo.style.display = 'none';
     }
     if (youtubeTrackInfo) {
-      youtubeTrackInfo.style.display = s === 'youtube' ? 'block' : 'none';
+      youtubeTrackInfo.style.display = 'none';
+    }
+    if (localTrackList) {
+      localTrackList.innerHTML = '';
     }
     
-    // Update local track list display
-    if (s === 'local') {
+    // Show only the selected source's track info
+    if (s === 'spotify' && spotifyTrackInfo) {
+      spotifyTrackInfo.style.display = 'block';
+    } else if (s === 'youtube' && youtubeTrackInfo) {
+      youtubeTrackInfo.style.display = 'block';
+    } else if (s === 'local') {
       updateAvailableTracksUI();
     }
 
@@ -91,7 +99,7 @@ const MusicPlayer = (function () {
       localIndex = 0;
       prepareLocalAudio(localIndex);
       setSource('local');
-      playLocal();
+      // Don't auto-play - wait for user to press play button
       updateAvailableTracksUI();
     }
   }
@@ -184,10 +192,10 @@ const MusicPlayer = (function () {
         height: '0',
         width: '0',
         videoId: videoId,
-        playerVars: { 'autoplay': 1, 'controls': 0, 'modestbranding': 1 },
+        playerVars: { 'autoplay': 0, 'controls': 0, 'modestbranding': 1 },
         events: {
           'onReady': (e) => { 
-            e.target.playVideo();
+            // Don't auto-play - wait for user to press play button
             // Update music status display
             const musicStatus = document.getElementById('music-status');
             if (musicStatus) {
