@@ -45,6 +45,7 @@ Perfect for:
 | **Story Generation** | Google Gemini 3 Flash | Creates dynamic narratives |
 | **Text-to-Speech** | Gemini Audio API | Professional voice narration |
 | **Image Generation** | Google Imagen 4.0 | Cinematic scene visualization |
+| **Music Integration** | Spotify Web API, YouTube IFrame API, File API | Personalized and local music playback |
 | **Frontend** | HTML5 + JavaScript + Tailwind CSS | User interface |
 | **Backend** | Firebase (optional) | User management |
 
@@ -54,7 +55,8 @@ Perfect for:
 
 - **8 Voice Options** with multiple accents
 - **5 Narrative Genres** (Fantasy, Sci-Fi, Mystery, Horror, Drama)
-- **6 Music Tracks** with intelligent keyword matching
+- **3 Music Sources** (Spotify, Local Files, YouTube) plus 6 default tracks
+- **Spotify Integration** for millions of personalized tracks
 - **Session Duration**: 5 minutes to 2 hours
 - **Average Chapter**: ~400 words (~12 sentences)
 - **Image Display**: Every 4 sentences

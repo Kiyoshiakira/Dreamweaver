@@ -90,6 +90,35 @@ const firebaseConfig = {
 };
 ```
 
+### Step 6: (Optional) Configure Spotify Integration
+
+For personalized music selection with Spotify:
+
+1. Go to [Spotify Developer Dashboard](https://developer.spotify.com/dashboard)
+2. Click **"Create App"**
+3. Fill in app details:
+   - App name: "Dreamweaver" (or your choice)
+   - App description: "AI storytelling with music"
+   - Redirect URI: Your app URL (e.g., `http://localhost:8000/dreamweaver.html`)
+4. Click **"Save"**
+5. Copy the **Client ID** from your app settings
+6. Update `dreamweaver.html` (around line 75):
+
+```javascript
+const SPOTIFY_CLIENT_ID = "YOUR_SPOTIFY_CLIENT_ID";
+```
+
+**Important Notes**:
+- Spotify integration requires HTTPS in production environments
+- The Spotify Web Playback SDK requires `'unsafe-eval'` in the Content Security Policy
+- The HTML file includes a CSP meta tag with this directive
+- If hosting on a platform with server-side CSP headers, ensure those headers also include `'unsafe-eval'` in the `script-src` directive
+
+**Local Development**:
+- Use `http://localhost:8000/dreamweaver.html` as redirect URI for testing
+- Serve via local HTTP server (see Development Setup below)
+- Do NOT use `file://` protocol (OAuth won't work)
+
 ---
 
 ## ⚙️ Configuration Reference
@@ -209,11 +238,37 @@ const MAX_VOLUME = 0.5;       // 50%
 const SAMPLE_RATE = 24000;    // Hz (TTS output)
 ```
 
+### Music Source Configuration
+
+```javascript
+// Spotify Configuration
+const SPOTIFY_CLIENT_ID = "YOUR_CLIENT_ID";  // From Spotify Developer Dashboard
+
+// Music source options (no configuration needed)
+// - Local Files: Browser file input API
+// - YouTube: YouTube IFrame API (loaded automatically)
+// - Default Library: Built-in tracks (no setup required)
+```
+
+**Music Source Notes**:
+- **Spotify**: Requires client ID and user OAuth authentication
+- **Local Files**: Works out of the box, no configuration needed
+- **YouTube**: Auto-loads IFrame API, may show ads
+- **Default Library**: Always available as fallback
+
 ---
 
 ## 🛠️ Development Setup
 
+## 🛠️ Development Setup
+
 ### Local Development
+
+**⚠️ Important**: Always serve the application using a local HTTP server rather than opening the HTML file directly (`file://`). This is essential for:
+- Cross-origin requests for SDK scripts (Spotify, YouTube)
+- IFrame postMessage functionality
+- OAuth redirect URIs (Spotify login)
+- Modern browser security policies
 
 #### Option 1: Python HTTP Server
 
@@ -497,6 +552,42 @@ const SCORE_LIBRARY = {
 3. Increase `IMAGE_QUEUE_DELAY_MS` to 2000
 4. Use faster internet connection
 5. Disable image generation temporarily (comment out calls)
+
+#### Spotify Connection Issues
+
+**Symptoms**: "Connect Spotify" button doesn't work or authentication fails
+
+**Solutions**:
+1. Verify `SPOTIFY_CLIENT_ID` is correctly set in code
+2. Check redirect URI matches in Spotify Developer Dashboard
+3. Use HTTP server (not `file://` protocol)
+4. Enable HTTPS for production deployments
+5. Check browser console for authentication errors
+6. Try logging out and back in
+7. Verify Spotify account is active
+
+#### Local Files Not Playing
+
+**Symptoms**: Uploaded files don't play or no sound
+
+**Solutions**:
+1. Check file format is supported (MP3, OGG, WAV recommended)
+2. Verify files aren't corrupted (try playing in media player)
+3. Check browser console for file loading errors
+4. Ensure volume slider isn't at zero
+5. Try different browser (Chrome recommended)
+
+#### YouTube Playback Issues
+
+**Symptoms**: Video won't load or audio doesn't play
+
+**Solutions**:
+1. Verify URL format is correct (full URL or video ID)
+2. Check video isn't region-restricted or private
+3. Allow ads to complete if shown
+4. Click play button after loading (autoplay may be blocked)
+5. Try different video (some videos restrict embedding)
+6. Check browser console for IFrame API errors
 
 ### Debug Mode
 

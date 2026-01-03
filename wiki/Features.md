@@ -163,11 +163,37 @@ From the user's perspective:
 
 ### Overview
 
-Dreamweaver doesn't just play random background music—it **analyzes your story content** to select the most appropriate soundtrack dynamically.
+Dreamweaver doesn't just play random background music—it **analyzes your story content** to select the most appropriate soundtrack dynamically. You can choose from multiple music sources including Spotify integration, local files, and YouTube videos.
 
-### Music Library
+### Music Sources
 
-Six carefully curated tracks, each with associated keywords:
+Dreamweaver supports three music sources:
+
+#### 🎵 **Spotify Integration** (Recommended)
+- Connect your Spotify account for personalized music selection
+- Log in with your Spotify account to access millions of tracks
+- AI intelligently selects tracks based on story mood and genre
+- Change songs on-the-fly while maintaining the same mood/genre
+- Seamlessly fallback to default music library when not logged in
+- Requires a free or premium Spotify account
+- Some tracks may not have preview URLs available for playback
+
+#### 📁 **Local Files**
+- Upload your own audio files (MP3, OGG, etc.)
+- Select multiple audio files from your device
+- Files play in sequence with automatic progression
+- **Note**: Local files are not persisted across browser sessions
+- Supports Web Audio API for enhanced volume control and crossfade
+
+#### 📺 **YouTube**
+- Play audio from YouTube videos
+- Paste a YouTube URL or video ID
+- Background audio playback via YouTube IFrame API
+- **Note**: YouTube may show ads; requires user gesture for autoplay
+
+### Default Music Library
+
+Six carefully curated tracks in the default library, each with associated keywords:
 
 | Track | Icon | Mood | Keywords |
 |-------|------|------|----------|
@@ -769,6 +795,15 @@ Genre influences:
 **When to Change**: Anytime during playback  
 **Effect**: Adjusts background music volume independently
 
+### Music Source
+
+**Options**: Spotify, Local Files, YouTube  
+**When to Change**: Anytime (can switch sources during playback)  
+**Effect**: Changes where music is sourced from
+- **Spotify**: Personalized track selection based on AI-detected mood
+- **Local Files**: Play your own uploaded audio files
+- **YouTube**: Stream audio from YouTube videos
+
 ### Story Prompt
 
 **Options**: Free text input  
@@ -781,18 +816,21 @@ Genre influences:
 - Voice: Despina or Algieba (calm, smooth)
 - Duration: 30-60 minutes
 - Genre: Fantasy or Drama
+- Music Source: Local Files or Spotify (calm playlists)
 - Music Volume: 10-15%
 
 **Optimal Settings for Engagement**:
 - Voice: Fenrir or Zephyr (energetic)
 - Duration: 5-30 minutes
 - Genre: Mystery or Sci-Fi
+- Music Source: Spotify or YouTube (dynamic tracks)
 - Music Volume: 20-30%
 
 **Optimal Settings for Children**:
 - Voice: Puck (playful)
 - Duration: 5-15 minutes
 - Genre: Fantasy
+- Music Source: Local Files (appropriate content)
 - Music Volume: 15-20%
 
 ---
@@ -805,7 +843,7 @@ Features planned for future releases:
 - [ ] **Story branching**: Make choices that affect the narrative
 - [ ] **Save/load stories**: Resume sessions or replay favorites
 - [ ] **Expanded music library**: 20+ tracks with more genres
-- [ ] **Custom music upload**: Use your own background tracks
+- [ ] **Full Spotify Web Playback SDK integration**: Complete track playback instead of preview URLs
 - [ ] **Multi-language support**: Stories in different languages
 - [ ] **Collaborative stories**: Multiple users contribute to one narrative
 - [ ] **Export to audio file**: Download stories as MP3s
