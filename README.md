@@ -78,7 +78,7 @@ Dreamweaver is a single-page web application that combines multiple AI technolog
 ### Prerequisites
 - A modern web browser (Chrome, Firefox, Safari, or Edge)
 - Google Gemini API key (for story generation and TTS)
-- Firebase configuration (optional, for user management)
+- Firebase configuration (optional, for secure API proxy and user management)
 - Spotify Developer account (optional, for Spotify integration)
 
 ### Installation
@@ -90,12 +90,33 @@ Dreamweaver is a single-page web application that combines multiple AI technolog
    ```
 
 2. **Configure API Keys**:
+   
+   **Option A: Quick Start (Client-side API key)**
+   
    Open `dreamweaver.html` and update the following:
    ```javascript
    const apiKey = "YOUR_GOOGLE_GEMINI_API_KEY";
-   const firebaseConfig = JSON.parse(__firebase_config);
    const SPOTIFY_CLIENT_ID = "YOUR_SPOTIFY_CLIENT_ID"; // Optional
    ```
+   
+   **Option B: Secure Setup (Firebase Proxy - Recommended for Production)**
+   
+   For a more secure setup that keeps your API key on the server:
+   1. Follow the [Firebase Proxy Setup Guide](server/README.md)
+   2. Configure Firebase Cloud Functions with your API key
+   3. Set up Firebase App Check with reCAPTCHA v3
+   4. Update configuration in `dreamweaver.html`:
+      ```javascript
+      const __firebase_config = JSON.stringify({
+          apiKey: "YOUR_FIREBASE_API_KEY",
+          authDomain: "your-project.firebaseapp.com",
+          projectId: "your-project-id",
+          // ... other Firebase config
+      });
+      const __recaptcha_site_key = "YOUR_RECAPTCHA_V3_SITE_KEY";
+      ```
+   
+   The app will automatically use the proxy when configured, and fall back to direct API calls if not.
 
 3. **Set up Spotify Integration (Optional)**:
    - Go to [Spotify Developer Dashboard](https://developer.spotify.com/dashboard)
@@ -173,7 +194,10 @@ Dreamweaver is a single-page web application that combines multiple AI technolog
   - OAuth 2.0 with PKCE for secure authentication
 - **Fonts**: Crimson Pro (novel text), Inter (UI)
 - **Audio**: Web Audio API, HTML5 Audio
-- **Backend**: Firebase (optional, for user management)
+- **Backend & Security**:
+  - Firebase Cloud Functions (secure API proxy)
+  - Firebase App Check (request verification with reCAPTCHA v3)
+  - Firebase Auth & Firestore (optional, for user management)
 
 ---
 
@@ -201,6 +225,14 @@ Dreamweaver is a single-page web application that combines multiple AI technolog
 5. Music transitions smoothly between moods as story evolves
 6. **Spotify Integration**: When logged in, searches Spotify for tracks matching the detected mood
 7. **Change Song Feature**: Users can request a different song while maintaining the same genre/mood
+
+### Secure API Proxy (Optional)
+- **Firebase Cloud Functions** proxy for Generative Language API
+- **App Check verification** prevents unauthorized access using reCAPTCHA v3
+- **Server-side API key** storage keeps credentials secure
+- **Automatic fallback** to direct API calls if proxy not configured
+- **Rate limiting** recommendations for production deployment
+- See [server/README.md](server/README.md) for setup instructions
 
 ---
 
