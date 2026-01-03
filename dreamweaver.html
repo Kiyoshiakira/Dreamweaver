@@ -1709,7 +1709,7 @@
             } else if (source === 'youtube' && typeof MusicPlayer !== 'undefined') {
                 const debugState = MusicPlayer._debugState();
                 if (debugState.ytQueue && debugState.ytQueue.length > 0) {
-                    const currentVideoId = debugState.ytQueue[0];
+                    const currentVideoId = debugState.ytQueue[debugState.ytIndex || 0];
                     musicStatus.textContent = `Video ID: ${currentVideoId}`;
                     musicSourceDisplay.textContent = 'Source: YouTube';
                 } else {
@@ -1778,7 +1778,11 @@
             if (narratorVolControl) {
                 narratorVolControl.addEventListener('input', (e) => {
                     const volume = parseFloat(e.target.value);
-                    state.currentAudio.volume = isNaN(volume) ? 1 : Math.max(0, Math.min(1, volume));
+                    const validVolume = isNaN(volume) ? 1 : Math.max(0, Math.min(1, volume));
+                    // Only set volume if currentAudio exists
+                    if (state.currentAudio) {
+                        state.currentAudio.volume = validVolume;
+                    }
                 });
             }
             

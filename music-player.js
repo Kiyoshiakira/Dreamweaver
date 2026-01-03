@@ -314,6 +314,6 @@ const MusicPlayer = (function () {
     next,
     setVolume,
     loadYouTubeAndPlay,
-    _debugState: () => ({ source, localTracks, localIndex, ytQueue }),
+    _debugState: () => ({ source, localTracks, localIndex, ytQueue, ytIndex }),
   };
 })();
