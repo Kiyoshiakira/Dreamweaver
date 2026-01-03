@@ -92,7 +92,7 @@
 
     <style>
         :root { --bg-deep: #020617; --accent: #6366f1; --text-main: #e2e8f0; }
-        body { background-color: var(--bg-deep); color: var(--text-main); font-family: 'Inter', sans-serif; overflow-x: hidden; }
+        body { background-color: var(--bg-deep); color: var(--text-main); font-family: 'Inter', sans-serif; overflow-x: hidden; position: relative; }
         .novel-font { font-family: 'Crimson Pro', serif; }
         .glass { background: rgba(15, 23, 42, 0.8); backdrop-filter: blur(16px); border: 1px solid rgba(255,255,255,0.08); }
         .tab-active { background: var(--accent); color: white; }
@@ -111,9 +111,101 @@
         .image-container img { width: 100%; height: 100%; object-fit: cover; transition: opacity 1.5s ease; }
         
         .timer-glow { text-shadow: 0 0 10px rgba(99, 102, 241, 0.5); }
+        
+        /* Sleepy starfield background */
+        .starfield {
+            position: fixed;
+            top: 0;
+            left: 0;
+            width: 100%;
+            height: 100%;
+            z-index: 0;
+            background: linear-gradient(to bottom, #020617 0%, #0f172a 50%, #1e1b4b 100%);
+            overflow: hidden;
+        }
+        
+        .star {
+            position: absolute;
+            background: white;
+            border-radius: 50%;
+            animation: twinkle linear infinite;
+        }
+        
+        @keyframes twinkle {
+            0%, 100% { opacity: 0.2; transform: scale(1); }
+            50% { opacity: 1; transform: scale(1.2); }
+        }
+        
+        /* Predefined animation classes for better performance */
+        .star-slow { animation-duration: 8s; }
+        .star-medium { animation-duration: 5s; }
+        .star-fast { animation-duration: 3s; }
+        .star-delay-1 { animation-delay: 0s; }
+        .star-delay-2 { animation-delay: 1s; }
+        .star-delay-3 { animation-delay: 2s; }
+        .star-delay-4 { animation-delay: 3s; }
+        .star-size-small { width: 1px; height: 1px; }
+        .star-size-medium { width: 2px; height: 2px; }
+        .star-size-large { width: 3px; height: 3px; }
+        
+        .shoot-slow { animation-duration: 5s; }
+        .shoot-medium { animation-duration: 3.5s; }
+        .shoot-fast { animation-duration: 2s; }
+        .shoot-delay-1 { animation-delay: 0s; }
+        .shoot-delay-2 { animation-delay: 3s; }
+        .shoot-delay-3 { animation-delay: 6s; }
+        .shoot-delay-4 { animation-delay: 9s; }
+        .shoot-delay-5 { animation-delay: 12s; }
+        .shoot-width-small { width: 50px; }
+        .shoot-width-medium { width: 100px; }
+        .shoot-width-large { width: 150px; }
+        
+        .shooting-star {
+            position: absolute;
+            height: 2px;
+            background: linear-gradient(to right, rgba(255, 255, 255, 0), rgba(255, 255, 255, 1), rgba(255, 255, 255, 0));
+            animation: shoot linear infinite;
+            opacity: 0;
+        }
+        
+        @keyframes shoot {
+            0% { opacity: 0; transform: translateX(-10vw) translateY(-10vh); }
+            10% { opacity: 1; }
+            90% { opacity: 1; }
+            100% { opacity: 0; transform: translateX(100vw) translateY(100vh); }
+        }
+        
+        .moon {
+            position: fixed;
+            top: 5%;
+            right: 5%;
+            width: 120px;
+            height: 120px;
+            border-radius: 50%;
+            background: linear-gradient(135deg, #fef9e7 0%, #f7dc6f 50%, #f4d03f 100%);
+            box-shadow: 0 0 60px rgba(247, 220, 111, 0.6), 
+                        inset -20px -20px 40px rgba(0, 0, 0, 0.1);
+            z-index: 5;
+            animation: moon-glow 4s ease-in-out infinite;
+        }
+        
+        @keyframes moon-glow {
+            0%, 100% { box-shadow: 0 0 60px rgba(247, 220, 111, 0.6), inset -20px -20px 40px rgba(0, 0, 0, 0.1); }
+            50% { box-shadow: 0 0 80px rgba(247, 220, 111, 0.8), inset -20px -20px 40px rgba(0, 0, 0, 0.1); }
+        }
+        
+        /* Ensure content stays above background */
+        #app {
+            position: relative;
+            z-index: 10;
+        }
     </style>
 </head>
 <body class="selection:bg-indigo-500/30">
+    <!-- Starfield background -->
+    <div class="starfield" id="starfield"></div>
+    <div class="moon"></div>
+    
     <div id="app" class="relative z-10 min-h-screen flex flex-col">
         <nav class="flex items-center justify-between p-6 max-w-7xl mx-auto w-full">
             <div class="flex items-center gap-3">
@@ -1557,6 +1649,60 @@
             // The music-player.js controls background music only and does not interfere
             // with the main story playback controls (togglePlayback, etc.)
         });
+    </script>
+    
+    <!-- Starfield generation script -->
+    <script>
+        // Generate stars for the background
+        (function generateStarfield() {
+            const starfield = document.getElementById('starfield');
+            if (!starfield) return;
+            
+            // Predefined classes for performance
+            const sizes = ['star-size-small', 'star-size-medium', 'star-size-large'];
+            const speeds = ['star-slow', 'star-medium', 'star-fast'];
+            const delays = ['star-delay-1', 'star-delay-2', 'star-delay-3', 'star-delay-4'];
+            
+            // Create regular stars
+            const starCount = 200;
+            for (let i = 0; i < starCount; i++) {
+                const star = document.createElement('div');
+                star.className = 'star';
+                
+                // Random position
+                star.style.left = Math.random() * 100 + '%';
+                star.style.top = Math.random() * 100 + '%';
+                
+                // Add random predefined classes
+                star.classList.add(sizes[Math.floor(Math.random() * sizes.length)]);
+                star.classList.add(speeds[Math.floor(Math.random() * speeds.length)]);
+                star.classList.add(delays[Math.floor(Math.random() * delays.length)]);
+                
+                starfield.appendChild(star);
+            }
+            
+            // Create shooting stars
+            const shootingStarCount = 5;
+            const shootSpeeds = ['shoot-slow', 'shoot-medium', 'shoot-fast'];
+            const shootDelays = ['shoot-delay-1', 'shoot-delay-2', 'shoot-delay-3', 'shoot-delay-4', 'shoot-delay-5'];
+            const shootWidths = ['shoot-width-small', 'shoot-width-medium', 'shoot-width-large'];
+            
+            for (let i = 0; i < shootingStarCount; i++) {
+                const shootingStar = document.createElement('div');
+                shootingStar.className = 'shooting-star';
+                
+                // Random starting position
+                shootingStar.style.left = Math.random() * 50 + '%';
+                shootingStar.style.top = Math.random() * 50 + '%';
+                
+                // Add predefined classes for performance
+                shootingStar.classList.add(shootWidths[Math.floor(Math.random() * shootWidths.length)]);
+                shootingStar.classList.add(shootSpeeds[Math.floor(Math.random() * shootSpeeds.length)]);
+                shootingStar.classList.add(shootDelays[i % shootDelays.length]); // Distribute delays sequentially for consistent spacing
+                
+                starfield.appendChild(shootingStar);
+            }
+        })();
     </script>
 </body>
 
