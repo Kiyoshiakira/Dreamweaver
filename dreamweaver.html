@@ -483,7 +483,40 @@
     </div>
 
     <script>
+        // ============================================================================
+        // Configuration Variables
+        // ============================================================================
+        
+        // Client-side API key - used as fallback when proxy is not configured
+        // This key is kept for backward compatibility and development convenience
+        // For production, use the Firebase proxy to keep the key server-side
         const apiKey = "AIzaSyAn9y0jXqRvoc4jfLUco2cSsQNoN27M7T8";
+        
+        // Firebase Proxy Configuration (Optional)
+        // Set these variables to enable secure server-side API key usage:
+        //
+        // const __firebase_config = JSON.stringify({
+        //     apiKey: "YOUR_FIREBASE_API_KEY",
+        //     authDomain: "your-project.firebaseapp.com",
+        //     projectId: "your-project-id",
+        //     storageBucket: "your-project.appspot.com",
+        //     messagingSenderId: "123456789",
+        //     appId: "1:123456789:web:abc123"
+        // });
+        //
+        // const __recaptcha_site_key = "YOUR_RECAPTCHA_V3_SITE_KEY";
+        //
+        // const __proxy_url = "/generateStory"; // or full URL to your Cloud Function
+        //
+        // const PROXY_GENERATE = true; // Set to false to disable proxy and use direct API
+        //
+        // When configured, the app will:
+        // 1. Initialize Firebase App Check with reCAPTCHA v3
+        // 2. Call the Firebase Function proxy for story generation
+        // 3. Fall back to direct API calls if proxy fails or is not configured
+        //
+        // See server/README.md for deployment instructions
+        
         const DEFAULT_ACCENT = 'American';
         const MUSIC_SELECTION_MIN_SCORE = 2; // Minimum keyword matches for intelligent music selection
         const IMAGE_QUEUE_DELAY_MS = 1000; // Delay between background image generations to avoid API overload
@@ -492,7 +525,7 @@
         // API Response Validation Helpers
         function validateStoryResponse(data) {
             if (!data || !data.candidates || !data.candidates[0] || 
-                !data.candidates[0].content || !data.candidates[0].content.parts || 
+                !data.candidates[0].content || !data.candidates[0].content.parts ||
                 !data.candidates[0].content.parts[0] || !data.candidates[0].content.parts[0].text) {
                 throw new Error('Invalid story generation API response: ' + JSON.stringify(data));
             }
