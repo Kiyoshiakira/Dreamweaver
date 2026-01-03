@@ -35,7 +35,7 @@
             https://*.googleapis.com
             https://www.gstatic.com;
         media-src 'self' https: blob:;
-        frame-src https://accounts.spotify.com https://sdk.scdn.co https://www.youtube.com https://www.youtube-nocookie.com;
+        frame-src https://accounts.spotify.com https://sdk.scdn.co https://www.youtube.com https://www.youtube-nocookie.com https://www.google.com https://recaptcha.google.com;
     ">
     <title>Dreamweaver</title>
     <!-- Note: Tailwind CDN is used for development convenience. For production deployment,
@@ -48,10 +48,12 @@
         import { initializeApp } from "https://www.gstatic.com/firebasejs/11.6.1/firebase-app.js";
         import { getAuth, signInAnonymously, signInWithCustomToken, onAuthStateChanged } from "https://www.gstatic.com/firebasejs/11.6.1/firebase-auth.js";
         import { getFirestore, collection, doc, addDoc, getDocs, query, where, onSnapshot, deleteDoc, updateDoc } from "https://www.gstatic.com/firebasejs/11.6.1/firebase-firestore.js";
+        import { initializeAppCheck, ReCaptchaV3Provider } from "https://www.gstatic.com/firebasejs/11.6.1/firebase-app-check.js";
 
         // Firebase configuration - optional, only initialize if config is provided
         let auth = null;
         let db = null;
+        let appCheck = null;
         const appId = typeof __app_id !== 'undefined' ? __app_id : 'narrative-engine-infinite';
         
         try {
@@ -60,6 +62,25 @@
                 const app = initializeApp(firebaseConfig);
                 auth = getAuth(app);
                 db = getFirestore(app);
+                
+                // Initialize App Check if reCAPTCHA site key is provided
+                // Get your reCAPTCHA v3 site key from: https://www.google.com/recaptcha/admin
+                // Set it via: const __recaptcha_site_key = "YOUR_SITE_KEY";
+                if (typeof __recaptcha_site_key !== 'undefined' && __recaptcha_site_key) {
+                    try {
+                        appCheck = initializeAppCheck(app, {
+                            provider: new ReCaptchaV3Provider(__recaptcha_site_key),
+                            isTokenAutoRefreshEnabled: true
+                        });
+                        console.log('Firebase App Check initialized successfully');
+                    } catch (appCheckError) {
+                        console.warn('App Check initialization failed:', appCheckError.message);
+                        console.warn('Proxy will not be available. Using direct API calls as fallback.');
+                    }
+                } else {
+                    console.log('reCAPTCHA site key not provided - App Check disabled');
+                    console.log('To enable proxy: Set __recaptcha_site_key variable with your reCAPTCHA v3 site key');
+                }
             } else {
                 console.log('Firebase configuration not provided - running without Firebase backend');
             }
@@ -67,7 +88,7 @@
             console.warn('Firebase initialization failed - running without Firebase backend:', error.message);
         }
 
-        window.fb = { auth, db, appId };
+        window.fb = { auth, db, appId, appCheck };
 
         // Spotify Configuration
         // IMPORTANT: Replace SPOTIFY_CLIENT_ID with your actual Spotify Client ID from https://developer.spotify.com/dashboard
@@ -485,6 +506,129 @@
                 throw new Error('Invalid TTS API response structure: ' + JSON.stringify(data));
             }
             return data;
+        }
+        
+        /**
+         * Helper function to call the Firebase proxy for story generation
+         * Acquires an App Check token and POSTs to the generateStory endpoint
+         * 
+         * @param {string} prompt - The story prompt or continuation instruction
+         * @param {string} systemInstruction - System instruction for the AI
+         * @returns {Promise<Object>} - API response data
+         * @throws {Error} - If proxy is not configured or request fails
+         */
+        async function callGenerateProxy(prompt, systemInstruction) {
+            // Check if Firebase App Check is initialized
+            if (!window.fb || !window.fb.appCheck) {
+                throw new Error('PROXY_NOT_CONFIGURED');
+            }
+            
+            try {
+                // Import getToken from App Check
+                const { getToken } = await import("https://www.gstatic.com/firebasejs/11.6.1/firebase-app-check.js");
+                
+                // Get App Check token
+                const appCheckTokenResponse = await getToken(window.fb.appCheck, /* forceRefresh */ false);
+                const appCheckToken = appCheckTokenResponse.token;
+                
+                console.log('Calling proxy endpoint with App Check token');
+                
+                // Determine proxy URL
+                // If using Firebase Hosting with rewrites, use relative path
+                // Otherwise, use the full Cloud Function URL
+                const proxyUrl = typeof __proxy_url !== 'undefined' && __proxy_url 
+                    ? __proxy_url 
+                    : '/generateStory';
+                
+                // POST to proxy endpoint
+                const response = await fetch(proxyUrl, {
+                    method: 'POST',
+                    headers: {
+                        'Content-Type': 'application/json',
+                        'X-Firebase-AppCheck': appCheckToken
+                    },
+                    body: JSON.stringify({
+                        prompt: prompt,
+                        systemInstruction: systemInstruction
+                    })
+                });
+                
+                if (!response.ok) {
+                    const errorData = await response.json().catch(() => ({ error: 'Unknown error' }));
+                    
+                    // Provide helpful error messages based on status code
+                    if (response.status === 403) {
+                        throw new Error(`PROXY_AUTH_FAILED: ${errorData.details || 'App Check verification failed'}`);
+                    } else if (response.status === 502) {
+                        throw new Error(`PROXY_UPSTREAM_ERROR: ${errorData.details || 'Upstream API error'}`);
+                    } else if (response.status === 500) {
+                        throw new Error(`PROXY_SERVER_ERROR: ${errorData.details || 'Internal server error'}`);
+                    } else {
+                        throw new Error(`PROXY_ERROR: ${errorData.error || `HTTP ${response.status}`}`);
+                    }
+                }
+                
+                const data = await response.json();
+                console.log('Successfully received response from proxy');
+                return data;
+                
+            } catch (error) {
+                // Re-throw with more context
+                if (error.message && error.message.startsWith('PROXY_')) {
+                    throw error;
+                }
+                throw new Error(`PROXY_REQUEST_FAILED: ${error.message}`);
+            }
+        }
+        
+        /**
+         * Show a transient banner with error message
+         * Used to inform users about proxy/API issues
+         */
+        function showTransientBanner(message, type = 'warning') {
+            // Check if banner already exists
+            let banner = document.getElementById('transient-banner');
+            if (!banner) {
+                banner = document.createElement('div');
+                banner.id = 'transient-banner';
+                banner.className = 'fixed top-20 left-1/2 -translate-x-1/2 max-w-2xl mx-auto z-50 transition-all duration-300';
+                document.body.appendChild(banner);
+            }
+            
+            const bgColor = type === 'error' ? 'bg-red-900/30 border-red-500/50' : 
+                           type === 'info' ? 'bg-blue-900/30 border-blue-500/50' :
+                           'bg-yellow-900/30 border-yellow-500/50';
+            
+            const textColor = type === 'error' ? 'text-red-400' : 
+                             type === 'info' ? 'text-blue-400' :
+                             'text-yellow-400';
+            
+            banner.innerHTML = `
+                <div class="${bgColor} border rounded-2xl p-4 backdrop-blur-sm">
+                    <div class="flex items-start gap-3">
+                        <svg class="w-6 h-6 ${textColor} flex-shrink-0 mt-0.5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                            <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M12 9v2m0 4h.01m-6.938 4h13.856c1.54 0 2.502-1.667 1.732-3L13.732 4c-.77-1.333-2.694-1.333-3.464 0L3.34 16c-.77 1.333.192 3 1.732 3z"/>
+                        </svg>
+                        <div class="flex-1 min-w-0">
+                            <p class="${textColor} text-sm">${message}</p>
+                        </div>
+                        <button onclick="document.getElementById('transient-banner').remove()" 
+                                class="${textColor} hover:opacity-75 transition-opacity p-1" 
+                                title="Dismiss">
+                            <svg class="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                                <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M6 18L18 6M6 6l12 12"/>
+                            </svg>
+                        </button>
+                    </div>
+                </div>
+            `;
+            
+            // Auto-dismiss after 10 seconds
+            setTimeout(() => {
+                if (banner && banner.parentNode) {
+                    banner.remove();
+                }
+            }, 10000);
         }
         
         const VOICES = {
@@ -1143,23 +1287,63 @@
             Output JSON: { "title": "Chapter Title", "prose": "About 400 words of story", "score_type": "epic/horror/noir/scifi/whimsical/dramatic", "key_visual_moments": ["brief scene description 1", "brief scene description 2"] }
             Include 2-3 key visual moments that represent important scenes in this chapter.`;
 
+            const promptText = `History: ${state.history.join(' ')}\n\nCurrent Focus: ${seedPrompt}`;
+            
+            // Determine whether to use proxy or direct API call
+            // Use proxy if PROXY_GENERATE is not explicitly set to false and App Check is available
+            const useProxy = typeof PROXY_GENERATE === 'undefined' ? true : PROXY_GENERATE;
+            let data = null;
+            let usedProxy = false;
+            
             try {
-                const res = await fetch(`https://generativelanguage.googleapis.com/v1beta/models/gemini-3-flash-preview:generateContent?key=${apiKey}`, {
-                    method: 'POST',
-                    headers: { 'Content-Type': 'application/json' },
-                    body: JSON.stringify({
-                        contents: [{ parts: [{ text: `History: ${state.history.join(' ')}\n\nCurrent Focus: ${seedPrompt}` }] }],
-                        systemInstruction: { parts: [{ text: sys }] },
-                        generationConfig: { responseMimeType: "application/json" }
-                    })
-                });
-                
-                if (!res.ok) {
-                    throw new Error(`API request failed: ${res.status} ${res.statusText}`);
+                // Try proxy first if available and not disabled
+                if (useProxy && window.fb && window.fb.appCheck) {
+                    try {
+                        console.log('Attempting to use Firebase proxy for story generation');
+                        data = await callGenerateProxy(promptText, sys);
+                        usedProxy = true;
+                        console.log('✓ Successfully used Firebase proxy');
+                    } catch (proxyError) {
+                        console.warn('Proxy request failed, falling back to direct API:', proxyError.message);
+                        
+                        // Show informative banner based on error type
+                        if (proxyError.message.includes('PROXY_NOT_CONFIGURED')) {
+                            console.log('ℹ️ Proxy not configured - using direct API call');
+                        } else if (proxyError.message.includes('PROXY_AUTH_FAILED')) {
+                            showTransientBanner('App Check verification failed. Using direct API as fallback. Check your reCAPTCHA configuration.', 'warning');
+                        } else if (proxyError.message.includes('PROXY_UPSTREAM_ERROR')) {
+                            showTransientBanner('Proxy upstream error. Using direct API as fallback. Check server-side API key configuration.', 'warning');
+                        } else if (proxyError.message.includes('PROXY_SERVER_ERROR')) {
+                            showTransientBanner('Proxy server error. Using direct API as fallback.', 'warning');
+                        }
+                        
+                        // Fall through to direct API call
+                        data = null;
+                    }
                 }
                 
-                const data = await res.json();
-                validateStoryResponse(data); // Validate response structure
+                // Fallback to direct API call if proxy not used or failed
+                if (!data) {
+                    console.log('Using direct API call to Generative Language API');
+                    const res = await fetch(`https://generativelanguage.googleapis.com/v1beta/models/gemini-3-flash-preview:generateContent?key=${apiKey}`, {
+                        method: 'POST',
+                        headers: { 'Content-Type': 'application/json' },
+                        body: JSON.stringify({
+                            contents: [{ parts: [{ text: promptText }] }],
+                            systemInstruction: { parts: [{ text: sys }] },
+                            generationConfig: { responseMimeType: "application/json" }
+                        })
+                    });
+                    
+                    if (!res.ok) {
+                        throw new Error(`API request failed: ${res.status} ${res.statusText}`);
+                    }
+                    
+                    data = await res.json();
+                }
+                
+                // Validate response structure (same for both proxy and direct API)
+                validateStoryResponse(data);
                 
                 const result = JSON.parse(data.candidates[0].content.parts[0].text);
                 
