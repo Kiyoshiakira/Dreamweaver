@@ -703,80 +703,6 @@
             }
         }
         
-        /**
-         * Helper function to call the Firebase proxy for story generation
-         * @deprecated This function is deprecated as of the FireGen migration.
-         *             Use generateTextWithFireGen() instead for all text generation needs.
-         *             This function will be removed in a future version.
-         *             Migration: Replace callGenerateProxy(prompt, sys) with generateTextWithFireGen(prompt, sys)
-         * @param {string} prompt - The story prompt or continuation instruction
-         * @param {string} systemInstruction - System instruction for the AI
-         * @returns {Promise<Object>} - API response data
-         * @throws {Error} - If proxy is not configured or request fails
-         */
-        async function callGenerateProxy(prompt, systemInstruction) {
-            // Check if Firebase App Check is initialized
-            if (!window.fb || !window.fb.appCheck) {
-                throw new Error('PROXY_NOT_CONFIGURED');
-            }
-            
-            try {
-                // Import getToken from App Check
-                const { getToken } = await import("https://www.gstatic.com/firebasejs/11.6.1/firebase-app-check.js");
-                
-                // Get App Check token
-                const appCheckTokenResponse = await getToken(window.fb.appCheck, /* forceRefresh */ false);
-                const appCheckToken = appCheckTokenResponse.token;
-                
-                console.log('Calling proxy endpoint with App Check token');
-                
-                // Determine proxy URL
-                // If using Firebase Hosting with rewrites, use relative path
-                // Otherwise, use the full Cloud Function URL
-                const proxyUrl = typeof __proxy_url !== 'undefined' && __proxy_url 
-                    ? __proxy_url 
-                    : '/generateStory';
-                
-                // POST to proxy endpoint
-                const response = await fetch(proxyUrl, {
-                    method: 'POST',
-                    headers: {
-                        'Content-Type': 'application/json',
-                        'X-Firebase-AppCheck': appCheckToken
-                    },
-                    body: JSON.stringify({
-                        prompt: prompt,
-                        systemInstruction: systemInstruction
-                    })
-                });
-                
-                if (!response.ok) {
-                    const errorData = await response.json().catch(() => ({ error: 'Unknown error' }));
-                    
-                    // Provide helpful error messages based on status code
-                    if (response.status === 403) {
-                        throw new Error(`PROXY_AUTH_FAILED: ${errorData.details || 'App Check verification failed'}`);
-                    } else if (response.status === 502) {
-                        throw new Error(`PROXY_UPSTREAM_ERROR: ${errorData.details || 'Upstream API error'}`);
-                    } else if (response.status === 500) {
-                        throw new Error(`PROXY_SERVER_ERROR: ${errorData.details || 'Internal server error'}`);
-                    } else {
-                        throw new Error(`PROXY_ERROR: ${errorData.error || `HTTP ${response.status}`}`);
-                    }
-                }
-                
-                const data = await response.json();
-                console.log('Successfully received response from proxy');
-                return data;
-                
-            } catch (error) {
-                // Re-throw with more context
-                if (error.message && error.message.startsWith('PROXY_')) {
-                    throw error;
-                }
-                throw new Error(`PROXY_REQUEST_FAILED: ${error.message}`);
-            }
-        }
         
         /**
          * Show a transient banner with error message
@@ -1683,21 +1609,6 @@
                 console.error('TTS generation failed:', error);
                 throw new Error(`TTS generation failed: ${error.message}`);
             }
-        }
-
-        function base64ToWav(base64, rate) {
-            const bin = atob(base64);
-            const buf = new ArrayBuffer(bin.length);
-            const view = new Uint8Array(buf);
-            for (let i = 0; i < bin.length; i++) view[i] = bin.charCodeAt(i);
-            const header = new ArrayBuffer(44);
-            const hView = new DataView(header);
-            const writeStr = (off, s) => { for (let i = 0; i < s.length; i++) hView.setUint8(off + i, s.charCodeAt(i)); };
-            writeStr(0, 'RIFF'); hView.setUint32(4, 36 + buf.byteLength, true); writeStr(8, 'WAVE'); writeStr(12, 'fmt ');
-            hView.setUint32(16, 16, true); hView.setUint16(20, 1, true); hView.setUint16(22, 1, true); hView.setUint32(24, rate, true);
-            hView.setUint32(28, rate * 2, true); hView.setUint16(32, 2, true); hView.setUint16(34, 16, true); writeStr(36, 'data');
-            hView.setUint32(40, buf.byteLength, true);
-            return new Blob([header, buf], { type: 'audio/wav' });
         }
 
         async function updateVisual(idx) {
