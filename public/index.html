@@ -609,8 +609,10 @@
          * @param {string} systemInstruction - System instruction for the AI
          * @returns {Promise<string>} - Generated text
          */
-        async function generateTextWithFireGen(prompt, systemInstruction) {
-            const fullPrompt = `${systemInstruction}\n\n${prompt}`;
+        async function generateTextWithFireGen(prompt, systemInstruction = '') {
+            // Safely construct the prompt with null/undefined checks
+            const safeSystemInstruction = systemInstruction || '';
+            const fullPrompt = safeSystemInstruction ? `${safeSystemInstruction}\n\n${prompt}` : prompt;
             
             // Use AI-assisted mode for simplicity (FireGen will automatically use Gemini)
             const { resultPromise } = await submitFireGenJob(fullPrompt);
@@ -633,7 +635,9 @@
          * @returns {Promise<string>} - Signed URL to the generated audio file
          */
         async function generateAudioWithFireGen(text, options = {}) {
-            const prompt = `Convert this text to speech with ${options.voice || 'default'} voice: "${text}"`;
+            // Escape quotes in text to prevent string injection
+            const safeText = text.replace(/"/g, '\\"');
+            const prompt = `Convert this text to speech with ${options.voice || 'default'} voice: "${safeText}"`;
             
             // Use AI-assisted mode
             const { resultPromise } = await submitFireGenJob(prompt);
@@ -1458,8 +1462,19 @@
                 console.log('Using FireGen extension for story generation');
                 const textOutput = await generateTextWithFireGen(promptText, sys);
                 
-                // Parse JSON response
-                const result = JSON.parse(textOutput);
+                // Parse JSON response with error handling
+                let result;
+                try {
+                    result = JSON.parse(textOutput);
+                } catch (parseError) {
+                    console.error('Failed to parse story JSON:', textOutput);
+                    throw new Error(`Invalid JSON response from FireGen: ${parseError.message}`);
+                }
+                
+                // Validate required fields
+                if (!result.prose || !result.title) {
+                    throw new Error('Story response missing required fields (prose, title)');
+                }
                 
                 state.history.push(result.prose);
                 state.lastProseContent = result.prose;
