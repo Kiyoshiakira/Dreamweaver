@@ -1625,7 +1625,7 @@ Knowledge cutoff	January 2025
             const accentPrompt = state.accent !== DEFAULT_ACCENT ? ` Speak with a ${state.accent} accent.` : '';
             const fullText = text + accentPrompt;
             
-            const res = await fetch(`https://generativelanguage.googleapis.com/v1beta/models/gemini-3-flash-preview:generateContent?key=${apiKey}`, {
+            const res = await fetch(`https://generativelanguage.googleapis.com/v1beta/models/gemini-2.5-flash-preview-tts:generateContent?key=${apiKey}`, {
                 method: 'POST',
                 headers: { 'Content-Type': 'application/json' },
                 body: JSON.stringify({
@@ -1668,7 +1668,7 @@ Knowledge cutoff	January 2025
             document.getElementById('img-overlay').classList.remove('opacity-0');
             const context = state.sentences.slice(idx, idx+2).join(' ');
             try {
-                const res = await fetch(`https://generativelanguage.googleapis.com/v1beta/models/imagen-4.0-generate-001:predict?key=${apiKey}`, {
+                const res = await fetch(`https://generativelanguage.googleapis.com/v1beta/models/gemini-2.5-flash-image:generateContent?key=${apiKey}`, {
                     method: 'POST',
                     headers: { 'Content-Type': 'application/json' },
                     body: JSON.stringify({ instances: [{ prompt: `Cinematic professional fantasy art, atmospheric, ${state.genre} style: ${context}` }] })
@@ -1905,7 +1905,7 @@ Knowledge cutoff	January 2025
             if (state.imageCache.has(sentenceIdx)) return;
             
             try {
-                const res = await fetch(`https://generativelanguage.googleapis.com/v1beta/models/imagen-4.0-generate-001:predict?key=${apiKey}`, {
+                const res = await fetch(`https://generativelanguage.googleapis.com/v1beta/models/gemini-2.5-flash-image:generateContent?key=${apiKey}`, {
                     method: 'POST',
                     headers: { 'Content-Type': 'application/json' },
                     body: JSON.stringify({ 
