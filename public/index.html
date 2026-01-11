@@ -616,6 +616,11 @@
          * @returns {Promise<string>} - Generated text
          */
         async function generateTextWithFireGen(prompt, systemInstruction = '') {
+            // Validate required parameters
+            if (!prompt || typeof prompt !== 'string') {
+                throw new Error('generateTextWithFireGen requires a valid prompt string');
+            }
+            
             // Safely construct the prompt with null/undefined checks
             const safeSystemInstruction = systemInstruction || '';
             const fullPrompt = safeSystemInstruction ? `${safeSystemInstruction}\n\n${prompt}` : prompt;
@@ -641,6 +646,11 @@
          * @returns {Promise<string>} - Signed URL to the generated audio file
          */
         async function generateAudioWithFireGen(text, options = {}) {
+            // Validate required parameters
+            if (!text || typeof text !== 'string') {
+                throw new Error('generateAudioWithFireGen requires valid text string');
+            }
+            
             // Use JSON structure to safely pass text without escaping issues
             const voiceName = options.voice || 'default';
             const prompt = `Convert to speech with ${voiceName} voice. Text: ${text}`;
@@ -681,7 +691,10 @@
         
         /**
          * Helper function to call the Firebase proxy for story generation
-         * @deprecated Use generateTextWithFireGen instead
+         * @deprecated This function is deprecated as of the FireGen migration.
+         *             Use generateTextWithFireGen() instead for all text generation needs.
+         *             This function will be removed in a future version.
+         *             Migration: Replace callGenerateProxy(prompt, sys) with generateTextWithFireGen(prompt, sys)
          * @param {string} prompt - The story prompt or continuation instruction
          * @param {string} systemInstruction - System instruction for the AI
          * @returns {Promise<Object>} - API response data
@@ -1473,7 +1486,9 @@
                 try {
                     result = JSON.parse(textOutput);
                 } catch (parseError) {
-                    console.error('Failed to parse story JSON:', textOutput);
+                    // Log error without exposing potentially sensitive content
+                    const preview = textOutput.length > 100 ? textOutput.substring(0, 100) + '...' : textOutput;
+                    console.error('Failed to parse story JSON. Preview:', preview);
                     throw new Error(`Invalid JSON response from FireGen: ${parseError.message}`);
                 }
                 
