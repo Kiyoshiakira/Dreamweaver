@@ -77,10 +77,10 @@ exports.generateStory = functions.https.onRequest(async (req, res) => {
       return;
     }
     
-    // Get API key from functions config or environment
-    // Set using: firebase functions:config:set genai.key="YOUR_API_KEY"
-    // Or set GEN_API_KEY environment variable
-    const apiKey = functions.config().genai?.key || process.env.GEN_API_KEY;
+    // Get API key from environment variables
+    // Set using: firebase functions:config:set dreamweaver.apikey="YOUR_API_KEY" is deprecated
+    // Use environment variables instead.
+    const apiKey = process.env.DREAMWEAVER_APIKEY;
     
     if (!apiKey) {
       console.error('API key not configured');
