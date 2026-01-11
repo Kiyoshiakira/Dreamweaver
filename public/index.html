@@ -234,85 +234,7 @@
             measurementId: "G-J9V0ZBQCEK"
        });
 
-    const __recaptcha_site_key = "6LcP6UYsAAAAAFkX23OtzZzOumCBRnUZhg_RYGCE";Gemini 3 Flash Preview
-Property	Description
-Model code	gemini-3-flash-preview
-Supported data types
-Inputs
-
-Text, Image, Video, Audio, and PDF
-
-Output
-
-Text
-
-Token limits[*]
-Input token limit
-
-1,048,576
-
-Output token limit
-
-65,536
-
-Capabilities
-Audio generation
-
-Not supported
-
-Batch API
-
-Supported
-
-Caching
-
-Supported
-
-Code execution
-
-Supported
-
-File search
-
-Supported
-
-Function calling
-
-Supported
-
-Grounding with Google Maps
-
-Not supported
-
-Image generation
-
-Not supported
-
-Live API
-
-Not supported
-
-Search grounding
-
-Supported
-
-Structured outputs
-
-Supported
-
-Thinking
-
-Supported
-
-URL context
-
-Supported
-
-Versions	
-Read the model version patterns for more details.
-Preview: gemini-3-flash-preview
-Latest update	December 2025
-Knowledge cutoff	January 2025
+    const __recaptcha_site_key = "6LcP6UYsAAAAAFkX23OtzZzOumCBRnUZhg_RYGCE";
 
     </script>
     <!-- Starfield background -->
@@ -580,9 +502,10 @@ Knowledge cutoff	January 2025
         // ============================================================================
         
         // Client-side API key - used as fallback when proxy is not configured
-        // This key is kept for backward compatibility and development convenience
+        // IMPORTANT: Replace with your own Google Gemini API key
+        // Get your API key from: https://aistudio.google.com/app/apikey
         // For production, use the Firebase proxy to keep the key server-side
-        const apiKey = "AIzaSyAn9y0jXqRvoc4jfLUco2cSsQNoN27M7T8";
+        const apiKey = "YOUR_GOOGLE_GEMINI_API_KEY_HERE";
         
         // Firebase Proxy Configuration (Optional)
         // Set these variables to enable secure server-side API key usage:
