@@ -227,18 +227,22 @@
 </head>
 <body class="selection:bg-indigo-500/30">
     <script>
+       // Firebase Configuration - Uncomment and update with your project details
+       // IMPORTANT: Add databaseURL for FireGen extension to work
+       /*
        const __firebase_config = JSON.stringify({
-            apiKey: "AIzaSyAh_tqmJftUKUDSlkLMmW-ITZWKn7NTe0M",
-            authDomain: "dreamweaver-10d8e.firebaseapp.com",
-            projectId: "dreamweaver-10d8e",
-            storageBucket: "dreamweaver-10d8e.firebasestorage.app",
-            messagingSenderId: "58607480142",
-            appId: "1:58607480142:web:d2502ca74a7b69e2bb021f",
-            measurementId: "G-J9V0ZBQCEK"
+            apiKey: "YOUR_FIREBASE_API_KEY",
+            authDomain: "your-project.firebaseapp.com",
+            projectId: "your-project-id",
+            storageBucket: "your-project.firebasestorage.app",
+            messagingSenderId: "123456789",
+            appId: "1:123456789:web:abc123def456",
+            measurementId: "G-ABC123DEF",
+            databaseURL: "https://your-project.firebaseio.com"  // Required for FireGen
        });
 
-    const __recaptcha_site_key = "6LcP6UYsAAAAAFkX23OtzZzOumCBRnUZhg_RYGCE";
-
+    const __recaptcha_site_key = "YOUR_RECAPTCHA_V3_SITE_KEY";  // Optional for App Check
+       */
     </script>
     <!-- Starfield background -->
     <div class="starfield" id="starfield"></div>
@@ -559,8 +563,9 @@
         
         /**
          * Submit a job to FireGen extension via Realtime Database
-         * @param {string} prompt - The AI prompt (AI-assisted mode)
+         * @param {string} prompt - The AI prompt (AI-assisted mode) - used when explicitJob is null
          * @param {Object} explicitJob - Explicit mode job structure with model and parameters (optional)
+         *                               When provided, this takes precedence over the prompt parameter
          * @returns {Promise<{jobId: string, resultPromise: Promise}>} - Job ID and promise that resolves when job completes
          */
         async function submitFireGenJob(prompt, explicitJob = null) {
@@ -569,7 +574,8 @@
             }
             
             const jobsRef = ref(window.fb.rtdb, FIREGEN_JOBS_PATH);
-            const jobData = explicitJob || prompt; // Use explicit structure or simple prompt
+            // Use explicit job structure if provided (for advanced control), otherwise use AI-assisted mode with prompt
+            const jobData = explicitJob || prompt;
             const newJobRef = push(jobsRef, jobData);
             const jobId = newJobRef.key;
             
@@ -635,9 +641,9 @@
          * @returns {Promise<string>} - Signed URL to the generated audio file
          */
         async function generateAudioWithFireGen(text, options = {}) {
-            // Escape quotes in text to prevent string injection
-            const safeText = text.replace(/"/g, '\\"');
-            const prompt = `Convert this text to speech with ${options.voice || 'default'} voice: "${safeText}"`;
+            // Use JSON structure to safely pass text without escaping issues
+            const voiceName = options.voice || 'default';
+            const prompt = `Convert to speech with ${voiceName} voice. Text: ${text}`;
             
             // Use AI-assisted mode
             const { resultPromise } = await submitFireGenJob(prompt);
