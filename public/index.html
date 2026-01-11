@@ -48,11 +48,13 @@
         import { initializeApp } from "https://www.gstatic.com/firebasejs/11.6.1/firebase-app.js";
         import { getAuth, signInAnonymously, signInWithCustomToken, onAuthStateChanged } from "https://www.gstatic.com/firebasejs/11.6.1/firebase-auth.js";
         import { getFirestore, collection, doc, addDoc, getDocs, query, where, onSnapshot, deleteDoc, updateDoc } from "https://www.gstatic.com/firebasejs/11.6.1/firebase-firestore.js";
+        import { getDatabase, ref, push, onValue, set } from "https://www.gstatic.com/firebasejs/11.6.1/firebase-database.js";
         import { initializeAppCheck, ReCaptchaV3Provider } from "https://www.gstatic.com/firebasejs/11.6.1/firebase-app-check.js";
 
         // Firebase configuration - optional, only initialize if config is provided
         let auth = null;
         let db = null;
+        let rtdb = null; // Realtime Database for FireGen extension
         let appCheck = null;
         const appId = typeof __app_id !== 'undefined' ? __app_id : 'narrative-engine-infinite';
         
@@ -62,6 +64,7 @@
                 const app = initializeApp(firebaseConfig);
                 auth = getAuth(app);
                 db = getFirestore(app);
+                rtdb = getDatabase(app); // Initialize Realtime Database for FireGen
                 
                 // Initialize App Check if reCAPTCHA site key is provided
                 // Get your reCAPTCHA v3 site key from: https://www.google.com/recaptcha/admin
@@ -88,7 +91,7 @@
             console.warn('Firebase initialization failed - running without Firebase backend:', error.message);
         }
 
-        window.fb = { auth, db, appId, appCheck };
+        window.fb = { auth, db, rtdb, appId, appCheck };
 
         // Spotify Configuration
         // IMPORTANT: Replace SPOTIFY_CLIENT_ID with your actual Spotify Client ID from https://developer.spotify.com/dashboard
@@ -501,14 +504,17 @@
         // Configuration Variables
         // ============================================================================
         
-        // API Key has been removed for security
-        // This application now uses Firebase Extensions for AI features:
-        // - googlecloud/firestore-multimodal-genai (Gemini API for story generation)
-        // - googlecloud/text-to-speech (Text-to-Speech)
-        // Configure these extensions in Firebase Console under Extensions
+        // FireGen Extension Configuration
+        // This application uses the FireGen - AI Media Generator extension
+        // Extension: huan/firegen
+        // Handles text (Gemini), image (Imagen), and audio (Chirp/Lyria) generation
+        // Jobs are submitted to Firebase Realtime Database and results are returned with signed URLs
+        // Configure in Firebase Console under Extensions
         
-        // Firebase Proxy Configuration (Optional)
-        // Set these variables to enable secure server-side API key usage:
+        const FIREGEN_JOBS_PATH = 'firegen-jobs'; // Realtime Database path for job submissions
+        
+        // Firebase Configuration (Required for FireGen)
+        // Set these variables to enable Firebase Extensions:
         //
         // const __firebase_config = JSON.stringify({
         //     apiKey: "YOUR_FIREBASE_API_KEY",
@@ -516,26 +522,17 @@
         //     projectId: "your-project-id",
         //     storageBucket: "your-project.appspot.com",
         //     messagingSenderId: "123456789",
-        //     appId: "1:123456789:web:abc123"
+        //     appId: "1:123456789:web:abc123",
+        //     databaseURL: "https://your-project.firebaseio.com" // Required for Realtime Database
         // });
         //
-        // const __recaptcha_site_key = "YOUR_RECAPTCHA_V3_SITE_KEY";
-        //
-        // const __proxy_url = "/generateStory"; // or full URL to your Cloud Function
-        //
-        // const PROXY_GENERATE = true; // Set to false to disable proxy and use direct API
-        //
-        // When configured, the app will:
-        // 1. Initialize Firebase App Check with reCAPTCHA v3
-        // 2. Call the Firebase Function proxy for story generation
-        // 3. Fall back to direct API calls if proxy fails or is not configured
-        //
-        // See server/README.md for deployment instructions
+        // const __recaptcha_site_key = "YOUR_RECAPTCHA_V3_SITE_KEY"; // Optional for App Check
         
         const DEFAULT_ACCENT = 'American';
         const MUSIC_SELECTION_MIN_SCORE = 2; // Minimum keyword matches for intelligent music selection
         const IMAGE_QUEUE_DELAY_MS = 1000; // Delay between background image generations to avoid API overload
         const RESTART_PLAYBACK_DELAY_MS = 300; // Delay before starting playback after restart to allow UI updates to complete
+        const FIREGEN_TIMEOUT_MS = 120000; // 2 minute timeout for FireGen jobs
         
         // API Response Validation Helpers
         function validateStoryResponse(data) {
@@ -556,10 +553,125 @@
             return data;
         }
         
+        // ============================================================================
+        // FireGen Extension Helper Functions
+        // ============================================================================
+        
+        /**
+         * Submit a job to FireGen extension via Realtime Database
+         * @param {string} prompt - The AI prompt (AI-assisted mode)
+         * @param {Object} explicitJob - Explicit mode job structure with model and parameters (optional)
+         * @returns {Promise<{jobId: string, resultPromise: Promise}>} - Job ID and promise that resolves when job completes
+         */
+        async function submitFireGenJob(prompt, explicitJob = null) {
+            if (!window.fb || !window.fb.rtdb) {
+                throw new Error('Firebase Realtime Database not initialized. Configure __firebase_config with databaseURL.');
+            }
+            
+            const jobsRef = ref(window.fb.rtdb, FIREGEN_JOBS_PATH);
+            const jobData = explicitJob || prompt; // Use explicit structure or simple prompt
+            const newJobRef = push(jobsRef, jobData);
+            const jobId = newJobRef.key;
+            
+            console.log(`FireGen job submitted: ${jobId}`);
+            
+            // Return a promise that resolves when the job completes
+            const resultPromise = new Promise((resolve, reject) => {
+                const jobRef = ref(window.fb.rtdb, `${FIREGEN_JOBS_PATH}/${jobId}`);
+                const timeout = setTimeout(() => {
+                    unsubscribe();
+                    reject(new Error('FireGen job timeout - no response after 2 minutes'));
+                }, FIREGEN_TIMEOUT_MS);
+                
+                const unsubscribe = onValue(jobRef, (snapshot) => {
+                    const data = snapshot.val();
+                    
+                    // Check if job has completed (FireGen writes results back to the same node)
+                    if (data && (data.status === 'completed' || data.output || data.outputUrl)) {
+                        clearTimeout(timeout);
+                        unsubscribe();
+                        console.log(`FireGen job ${jobId} completed`);
+                        resolve(data);
+                    } else if (data && data.status === 'failed') {
+                        clearTimeout(timeout);
+                        unsubscribe();
+                        reject(new Error(`FireGen job failed: ${data.error || 'Unknown error'}`));
+                    }
+                });
+            });
+            
+            return { jobId, resultPromise };
+        }
+        
+        /**
+         * Generate text using FireGen with Gemini model
+         * @param {string} prompt - The text generation prompt
+         * @param {string} systemInstruction - System instruction for the AI
+         * @returns {Promise<string>} - Generated text
+         */
+        async function generateTextWithFireGen(prompt, systemInstruction) {
+            const fullPrompt = `${systemInstruction}\n\n${prompt}`;
+            
+            // Use AI-assisted mode for simplicity (FireGen will automatically use Gemini)
+            const { resultPromise } = await submitFireGenJob(fullPrompt);
+            const result = await resultPromise;
+            
+            // Extract text from result
+            if (result.output) {
+                return result.output;
+            } else if (result.text) {
+                return result.text;
+            } else {
+                throw new Error('FireGen did not return text output');
+            }
+        }
+        
+        /**
+         * Generate audio using FireGen with Chirp/Lyria models
+         * @param {string} text - Text to convert to speech
+         * @param {Object} options - Audio generation options (voice, accent, etc.)
+         * @returns {Promise<string>} - Signed URL to the generated audio file
+         */
+        async function generateAudioWithFireGen(text, options = {}) {
+            const prompt = `Convert this text to speech with ${options.voice || 'default'} voice: "${text}"`;
+            
+            // Use AI-assisted mode
+            const { resultPromise } = await submitFireGenJob(prompt);
+            const result = await resultPromise;
+            
+            // Extract audio URL from result
+            if (result.outputUrl) {
+                return result.outputUrl;
+            } else if (result.signedUrl) {
+                return result.signedUrl;
+            } else {
+                throw new Error('FireGen did not return audio URL');
+            }
+        }
+        
+        /**
+         * Generate image using FireGen with Imagen model
+         * @param {string} prompt - Image generation prompt
+         * @returns {Promise<string>} - Signed URL to the generated image
+         */
+        async function generateImageWithFireGen(prompt) {
+            // Use AI-assisted mode
+            const { resultPromise } = await submitFireGenJob(prompt);
+            const result = await resultPromise;
+            
+            // Extract image URL from result
+            if (result.outputUrl) {
+                return result.outputUrl;
+            } else if (result.signedUrl) {
+                return result.signedUrl;
+            } else {
+                throw new Error('FireGen did not return image URL');
+            }
+        }
+        
         /**
          * Helper function to call the Firebase proxy for story generation
-         * Acquires an App Check token and POSTs to the generateStory endpoint
-         * 
+         * @deprecated Use generateTextWithFireGen instead
          * @param {string} prompt - The story prompt or continuation instruction
          * @param {string} systemInstruction - System instruction for the AI
          * @returns {Promise<Object>} - API response data
@@ -1337,63 +1449,17 @@
 
             const promptText = `History: ${state.history.join(' ')}\n\nCurrent Focus: ${seedPrompt}`;
             
-            // Determine whether to use proxy or direct API call
-            // Use proxy if PROXY_GENERATE is not explicitly set to false and App Check is available
-            const useProxy = typeof PROXY_GENERATE === 'undefined' ? true : PROXY_GENERATE;
-            let data = null;
-            let usedProxy = false;
-            
             try {
-                // Try proxy first if available and not disabled
-                if (useProxy && window.fb && window.fb.appCheck) {
-                    try {
-                        console.log('Attempting to use Firebase proxy for story generation');
-                        data = await callGenerateProxy(promptText, sys);
-                        usedProxy = true;
-                        console.log('✓ Successfully used Firebase proxy');
-                    } catch (proxyError) {
-                        console.warn('Proxy request failed, falling back to direct API:', proxyError.message);
-                        
-                        // Show informative banner based on error type
-                        if (proxyError.message.includes('PROXY_NOT_CONFIGURED')) {
-                            console.log('ℹ️ Proxy not configured - using direct API call');
-                        } else if (proxyError.message.includes('PROXY_AUTH_FAILED')) {
-                            showTransientBanner('App Check verification failed. Using direct API as fallback. Check your reCAPTCHA configuration.', 'warning');
-                        } else if (proxyError.message.includes('PROXY_UPSTREAM_ERROR')) {
-                            showTransientBanner('Proxy upstream error. Using direct API as fallback. Check server-side API key configuration.', 'warning');
-                        } else if (proxyError.message.includes('PROXY_SERVER_ERROR')) {
-                            showTransientBanner('Proxy server error. Using direct API as fallback.', 'warning');
-                        }
-                        
-                        // Fall through to direct API call
-                        data = null;
-                    }
+                // Use FireGen extension for text generation
+                if (!window.fb || !window.fb.rtdb) {
+                    throw new Error('Firebase Realtime Database not configured. Please set __firebase_config with databaseURL.');
                 }
                 
-                // Fallback to direct API call if proxy not used or failed
-                if (!data) {
-                    console.log('Using direct API call to Generative Language API');
-                    const res = await fetch(`https://generativelanguage.googleapis.com/v1beta/models/gemini-3-flash-preview:generateContent?key=${apiKey}`, {
-                        method: 'POST',
-                        headers: { 'Content-Type': 'application/json' },
-                        body: JSON.stringify({
-                            contents: [{ parts: [{ text: promptText }] }],
-                            systemInstruction: { parts: [{ text: sys }] },
-                            generationConfig: { responseMimeType: "application/json" }
-                        })
-                    });
-                    
-                    if (!res.ok) {
-                        throw new Error(`API request failed: ${res.status} ${res.statusText}`);
-                    }
-                    
-                    data = await res.json();
-                }
+                console.log('Using FireGen extension for story generation');
+                const textOutput = await generateTextWithFireGen(promptText, sys);
                 
-                // Validate response structure (same for both proxy and direct API)
-                validateStoryResponse(data);
-                
-                const result = JSON.parse(data.candidates[0].content.parts[0].text);
+                // Parse JSON response
+                const result = JSON.parse(textOutput);
                 
                 state.history.push(result.prose);
                 state.lastProseContent = result.prose;
@@ -1548,26 +1614,25 @@
             const accentPrompt = state.accent !== DEFAULT_ACCENT ? ` Speak with a ${state.accent} accent.` : '';
             const fullText = text + accentPrompt;
             
-            const res = await fetch(`https://generativelanguage.googleapis.com/v1beta/models/gemini-2.5-flash-preview-tts:generateContent?key=${apiKey}`, {
-                method: 'POST',
-                headers: { 'Content-Type': 'application/json' },
-                body: JSON.stringify({
-                    contents: [{ parts: [{ text: fullText }] }],
-                    generationConfig: { 
-                        responseModalities: ["AUDIO"], 
-                        speechConfig: { voiceConfig: { prebuiltVoiceConfig: { voiceName: state.voice } } } 
-                    }
-                })
-            });
-            
-            if (!res.ok) {
-                throw new Error(`TTS API request failed: ${res.status} ${res.statusText}`);
+            try {
+                // Use FireGen extension for audio generation
+                const audioUrl = await generateAudioWithFireGen(fullText, { 
+                    voice: state.voice,
+                    accent: state.accent
+                });
+                
+                // Fetch the audio file from the signed URL
+                const response = await fetch(audioUrl);
+                if (!response.ok) {
+                    throw new Error(`Failed to fetch audio: ${response.status}`);
+                }
+                
+                // Return the audio blob
+                return await response.blob();
+            } catch (error) {
+                console.error('TTS generation failed:', error);
+                throw new Error(`TTS generation failed: ${error.message}`);
             }
-            
-            const data = await res.json();
-            validateTTSResponse(data); // Validate response structure
-            
-            return base64ToWav(data.candidates[0].content.parts[0].inlineData.data, 24000);
         }
 
         function base64ToWav(base64, rate) {
@@ -1591,33 +1656,12 @@
             document.getElementById('img-overlay').classList.remove('opacity-0');
             const context = state.sentences.slice(idx, idx+2).join(' ');
             try {
-                const res = await fetch(`https://generativelanguage.googleapis.com/v1beta/models/gemini-2.5-flash-image:generateContent?key=${apiKey}`, {
-                    method: 'POST',
-                    headers: { 'Content-Type': 'application/json' },
-                    body: JSON.stringify({ 
-                        contents: [{ 
-                            parts: [{ 
-                                text: `Cinematic professional fantasy art, atmospheric, ${state.genre} style: ${context}` 
-                            }] 
-                        }] 
-                    })
-                });
-                
-                if (!res.ok) {
-                    throw new Error(`Image API request failed: ${res.status} ${res.statusText}`);
-                }
-                
-                const data = await res.json();
-                
-                // Validate response structure before accessing nested properties
-                if (!data || !data.candidates || !data.candidates[0] || 
-                    !data.candidates[0].content || !data.candidates[0].content.parts || 
-                    !data.candidates[0].content.parts[0] || !data.candidates[0].content.parts[0].inlineData) {
-                    throw new Error('Invalid API response structure: missing image data');
-                }
+                // Use FireGen extension for image generation
+                const prompt = `Cinematic professional fantasy art, atmospheric, ${state.genre} style: ${context}`;
+                const imageUrl = await generateImageWithFireGen(prompt);
                 
                 const img = document.getElementById('scene-image');
-                img.src = `data:image/png;base64,${data.candidates[0].content.parts[0].inlineData.data}`;
+                img.src = imageUrl; // Use the signed URL directly
                 img.onload = () => {
                     img.classList.remove('opacity-0');
                     document.getElementById('img-overlay').classList.add('opacity-0');
@@ -1836,33 +1880,12 @@
             if (state.imageCache.has(sentenceIdx)) return;
             
             try {
-                const res = await fetch(`https://generativelanguage.googleapis.com/v1beta/models/gemini-2.5-flash-image:generateContent?key=${apiKey}`, {
-                    method: 'POST',
-                    headers: { 'Content-Type': 'application/json' },
-                    body: JSON.stringify({ 
-                        contents: [{ 
-                            parts: [{ 
-                                text: `Cinematic professional fantasy art, atmospheric, ${state.genre} style: ${promptText}` 
-                            }] 
-                        }] 
-                    })
-                });
+                // Use FireGen extension for image generation
+                const prompt = `Cinematic professional fantasy art, atmospheric, ${state.genre} style: ${promptText}`;
+                const imageUrl = await generateImageWithFireGen(prompt);
                 
-                if (!res.ok) {
-                    throw new Error(`Image API request failed: ${res.status} ${res.statusText}`);
-                }
-                
-                const data = await res.json();
-                
-                // Validate response structure before accessing nested properties
-                if (!data || !data.candidates || !data.candidates[0] || 
-                    !data.candidates[0].content || !data.candidates[0].content.parts || 
-                    !data.candidates[0].content.parts[0] || !data.candidates[0].content.parts[0].inlineData) {
-                    throw new Error('Invalid API response structure: missing image data');
-                }
-                
-                const imageData = `data:image/png;base64,${data.candidates[0].content.parts[0].inlineData.data}`;
-                state.imageCache.set(sentenceIdx, imageData);
+                // Cache the signed URL
+                state.imageCache.set(sentenceIdx, imageUrl);
                 console.log(`Pre-generated image for sentence ${sentenceIdx}`);
             } catch (err) {
                 console.error(`Failed to pre-generate image for sentence ${sentenceIdx}:`, err);
