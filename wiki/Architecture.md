@@ -38,8 +38,9 @@ Dreamweaver is built as a **single-page application (SPA)** using vanilla JavaSc
                     ▼
 ┌─────────────────────────────────────────────────────────────┐
 │                    External APIs                             │
-│  • Google Gemini (Story + TTS)                              │
-│  • Google Imagen (Images)                                    │
+│  • Google Gemini 3 Flash Preview (Story)                    │
+│  • Google Gemini 2.5 Flash Preview TTS (TTS)                │
+│  • Google Gemini 2.5 Flash Image (Images)                   │
 │  • Firebase (Optional User Management)                       │
 └─────────────────────────────────────────────────────────────┘
 ```
@@ -730,8 +731,7 @@ const SCORE_LIBRARY = {
 ## 🔗 Dependencies
 
 ### External Services
-- **Google Gemini API** (v1beta) - Story & TTS
-- **Google Imagen API** (4.0) - Image generation
+- **Google Gemini API** (v1beta) - Story, TTS & Image generation
 - **Firebase** (11.6.1) - Optional user management
 - **Spotify Web API** - Optional music integration
 - **Spotify Web Playback SDK** - Optional music playback

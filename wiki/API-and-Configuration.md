@@ -22,8 +22,7 @@ Dreamweaver requires the following Google Cloud APIs:
 
 | API | Purpose | Cost |
 |-----|---------|------|
-| **Google Gemini API** | Story generation & TTS | Usage-based |
-| **Google Imagen API** | Image generation | Usage-based |
+| **Google Gemini API** | Story generation, TTS & image generation | Usage-based |
 | **Firebase** (Optional) | User management | Free tier available |
 
 ### Step 1: Create Google Cloud Project
@@ -41,12 +40,6 @@ Dreamweaver requires the following Google Cloud APIs:
 2. Search for **"Generative Language API"**
 3. Click **"Enable"**
 
-#### Enable Imagen API
-
-1. In API Library, search for **"Imagen API"**
-2. Click **"Enable"**
-3. *(Note: Imagen may require billing account setup)*
-
 ### Step 3: Generate API Key
 
 1. Go to **"APIs & Services" → "Credentials"**
@@ -54,7 +47,6 @@ Dreamweaver requires the following Google Cloud APIs:
 3. Copy the generated key
 4. **Recommended**: Click **"Restrict Key"** and limit to:
    - Generative Language API
-   - Imagen API
    - HTTP referrers (your domain)
 
 ### Step 4: Configure Dreamweaver
@@ -508,8 +500,7 @@ const SCORE_LIBRARY = {
 **Solutions**:
 1. Verify API key is correct (no extra spaces)
 2. Check API is enabled in Google Cloud Console
-3. Verify billing account is active (required for Imagen)
-4. Check API key restrictions don't block your domain
+3. Check API key restrictions don't block your domain
 
 #### No Audio Playback
 
@@ -526,9 +517,9 @@ const SCORE_LIBRARY = {
 **Symptoms**: Loading spinner persists, no images appear
 
 **Solutions**:
-1. Verify Imagen API is enabled
+1. Verify Generative Language API is enabled
 2. Check console for API errors
-3. Confirm billing account is set up
+3. Check API key has proper permissions
 4. Test with longer initial wait time
 5. Check internet connection speed
 
@@ -619,7 +610,7 @@ Google APIs have usage quotas. If you hit limits:
 - Limit: Varies by region and account
 - Solution: Increase `state.retryDelayMs`, reduce chapter frequency
 
-**Imagen API**:
+**Gemini Image API**:
 - Limit: ~10-20 images/minute (typical)
 - Solution: Increase `IMAGE_QUEUE_DELAY_MS` to 3000-5000
 
@@ -707,7 +698,6 @@ Current implementation includes:
 
 ### Official Documentation
 - [Google Gemini API Docs](https://ai.google.dev/docs)
-- [Google Imagen API Docs](https://cloud.google.com/vertex-ai/docs/generative-ai/image/overview)
 - [Firebase Documentation](https://firebase.google.com/docs)
 
 ### Community Resources

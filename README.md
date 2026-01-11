@@ -15,9 +15,9 @@ Dreamweaver transforms your story ideas into immersive audiovisual experiences. 
 
 Dreamweaver is a single-page web application that combines multiple AI technologies to create a unique storytelling experience:
 
-- 🤖 **AI Story Generation**: Powered by Google's Gemini 3 Flash for dynamic narrative creation
+- 🤖 **AI Story Generation**: Powered by Google's Gemini 3 Flash Preview for dynamic narrative creation
 - 🎙️ **Text-to-Speech Narration**: Multiple voice options with accent support
-- 🎨 **AI Image Generation**: Imagen 4.0 creates cinematic visuals synchronized with the story
+- 🎨 **AI Image Generation**: Gemini 2.5 Flash Image creates cinematic visuals synchronized with the story
 - 🎵 **Adaptive Music**: Intelligent score selection based on story content analysis
 - ⏱️ **Session Management**: Configurable story duration with countdown timer
 - 📖 **Interactive Reading**: Real-time word highlighting and visual sentence tracking
@@ -186,8 +186,9 @@ Dreamweaver is a single-page web application that combines multiple AI technolog
 
 - **Frontend**: HTML5, JavaScript (ES6+), Tailwind CSS
 - **AI Models**: 
-  - Google Gemini 3 Flash (story generation & TTS)
-  - Google Imagen 4.0 (image generation)
+  - Google Gemini 3 Flash Preview (story generation)
+  - Google Gemini 2.5 Flash Preview TTS (text-to-speech)
+  - Google Gemini 2.5 Flash Image (image generation)
 - **Music Integration**:
   - Spotify Web API (personalized music selection)
   - Spotify Web Playback SDK
@@ -267,7 +268,7 @@ This project is licensed under the MIT License - see the [LICENSE](LICENSE) file
 
 ## 🙏 Acknowledgments
 
-- Google Generative AI for Gemini and Imagen APIs
+- Google Generative AI for Gemini APIs
 - Spotify for music streaming and Web API integration
 - Firebase for backend infrastructure
 - Tailwind CSS for styling framework
