@@ -573,6 +573,11 @@
                 throw new Error('Firebase Realtime Database not initialized. Configure __firebase_config with databaseURL.');
             }
             
+            // Validate that we have either a prompt or explicitJob
+            if (!explicitJob && (!prompt || typeof prompt !== 'string')) {
+                throw new Error('submitFireGenJob requires either a valid prompt string or explicitJob object');
+            }
+            
             const jobsRef = ref(window.fb.rtdb, FIREGEN_JOBS_PATH);
             // Use explicit job structure if provided (for advanced control), otherwise use AI-assisted mode with prompt
             const jobData = explicitJob || prompt;
@@ -584,12 +589,16 @@
             // Return a promise that resolves when the job completes
             const resultPromise = new Promise((resolve, reject) => {
                 const jobRef = ref(window.fb.rtdb, `${FIREGEN_JOBS_PATH}/${jobId}`);
+                
+                // Declare unsubscribe function first to avoid hoisting issues
+                let unsubscribe;
+                
                 const timeout = setTimeout(() => {
-                    unsubscribe();
+                    if (unsubscribe) unsubscribe();
                     reject(new Error('FireGen job timeout - no response after 2 minutes'));
                 }, FIREGEN_TIMEOUT_MS);
                 
-                const unsubscribe = onValue(jobRef, (snapshot) => {
+                unsubscribe = onValue(jobRef, (snapshot) => {
                     const data = snapshot.val();
                     
                     // Check if job has completed (FireGen writes results back to the same node)
@@ -675,6 +684,11 @@
          * @returns {Promise<string>} - Signed URL to the generated image
          */
         async function generateImageWithFireGen(prompt) {
+            // Validate required parameters
+            if (!prompt || typeof prompt !== 'string') {
+                throw new Error('generateImageWithFireGen requires a valid prompt string');
+            }
+            
             // Use AI-assisted mode
             const { resultPromise } = await submitFireGenJob(prompt);
             const result = await resultPromise;
