@@ -20,7 +20,7 @@ This page provides comprehensive documentation of all Dreamweaver features, incl
 
 ### Overview
 
-Dreamweaver uses Google's Imagen 4.0 to generate cinematic, atmospheric images that accompany your story. The system is designed for **zero interruption** during narration through intelligent pre-generation and caching.
+Dreamweaver uses Google's Gemini 2.5 Flash Image to generate cinematic, atmospheric images that accompany your story. The system is designed for **zero interruption** during narration through intelligent pre-generation and caching.
 
 ### How It Works
 
@@ -137,7 +137,7 @@ From the user's perspective:
 
 | Aspect | Value |
 |--------|-------|
-| **API** | Google Imagen 4.0 |
+| **API** | Google Gemini 2.5 Flash Image |
 | **Generation Time** | ~5-8 seconds per image |
 | **Display Frequency** | Every 4 sentences |
 | **Queue Delay** | 1 second between generations |
@@ -155,7 +155,7 @@ From the user's perspective:
 **Troubleshooting**:
 - **Blank images**: Check API key validity
 - **Slow loading**: Network speed may be limiting
-- **No images**: Verify Imagen API is enabled in Google Cloud
+- **No images**: Verify Generative Language API is enabled in Google Cloud
 
 ---
 
@@ -331,7 +331,7 @@ From the user's perspective:
 
 ### Overview
 
-Dreamweaver offers **8 distinct voice personas** across **4 accents**, powered by Google Gemini's advanced TTS engine.
+Dreamweaver offers **8 distinct voice personas** across **4 accents**, powered by Google Gemini 2.5 Flash Preview TTS engine.
 
 ### Available Voices
 
@@ -377,7 +377,7 @@ const fullText = sentence + accentPrompt;
 
 | Aspect | Value |
 |--------|-------|
-| **TTS Engine** | Google Gemini Audio API |
+| **TTS Engine** | Google Gemini 2.5 Flash Preview TTS |
 | **Sample Rate** | 24,000 Hz |
 | **Format** | 16-bit PCM WAV |
 | **Latency** | ~2-3 seconds per sentence |

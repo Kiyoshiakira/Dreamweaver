@@ -42,9 +42,9 @@ Perfect for:
 
 | Component | Technology | Purpose |
 |-----------|-----------|---------|
-| **Story Generation** | Google Gemini 3 Flash | Creates dynamic narratives |
-| **Text-to-Speech** | Gemini Audio API | Professional voice narration |
-| **Image Generation** | Google Imagen 4.0 | Cinematic scene visualization |
+| **Story Generation** | Google Gemini 3 Flash Preview | Creates dynamic narratives |
+| **Text-to-Speech** | Gemini 2.5 Flash Preview TTS | Professional voice narration |
+| **Image Generation** | Gemini 2.5 Flash Image | Cinematic scene visualization |
 | **Music Integration** | Spotify Web API, YouTube IFrame API, File API | Personalized and local music playback |
 | **Frontend** | HTML5 + JavaScript + Tailwind CSS | User interface |
 | **Backend** | Firebase (optional) | User management |

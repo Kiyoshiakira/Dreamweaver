@@ -561,8 +561,8 @@ Prompt:    Age-appropriate, positive themes
 **Symptoms**: Spinner persists, no image appears
 
 **Solutions**:
-1. Verify Imagen API is enabled
-2. Check billing account is active (Imagen requires billing)
+1. Verify Generative Language API is enabled
+2. Check API key has proper permissions
 3. Network tab: Look for 403 or 429 errors
 4. Wait longer (first image takes 5-8 seconds)
 5. Try disabling ad blocker (may interfere with API calls)
@@ -647,7 +647,7 @@ Prompt:    Age-appropriate, positive themes
 ### General
 
 **Q: Is Dreamweaver free to use?**  
-A: The app itself is free and open-source. However, you need a Google Cloud account with Gemini and Imagen APIs enabled. These APIs have usage-based costs (see Google Cloud pricing).
+A: The app itself is free and open-source. However, you need a Google Cloud account with Gemini API enabled. The API has usage-based costs (see Google Cloud pricing).
 
 **Q: Do I need an internet connection?**  
 A: Yes, Dreamweaver requires internet to call Google's AI APIs for story generation, TTS, and image generation.
@@ -690,7 +690,7 @@ A: Varies by usage. Typical 30-minute session:
 Check [Google Cloud Pricing](https://cloud.google.com/pricing) for current rates.
 
 **Q: Are there free tier limits?**  
-A: Gemini has free tier quotas (check Google AI Studio). Imagen typically requires billing from the start.
+A: Gemini has free tier quotas (check Google AI Studio for current limits).
 
 **Q: Can I use a different AI API?**  
 A: Yes, but requires code modifications. The architecture supports swapping providers, but you'll need to update API endpoints and request formats.
