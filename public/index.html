@@ -1671,7 +1671,13 @@ Knowledge cutoff	January 2025
                 const res = await fetch(`https://generativelanguage.googleapis.com/v1beta/models/gemini-2.5-flash-image:generateContent?key=${apiKey}`, {
                     method: 'POST',
                     headers: { 'Content-Type': 'application/json' },
-                    body: JSON.stringify({ instances: [{ prompt: `Cinematic professional fantasy art, atmospheric, ${state.genre} style: ${context}` }] })
+                    body: JSON.stringify({ 
+                        contents: [{ 
+                            parts: [{ 
+                                text: `Cinematic professional fantasy art, atmospheric, ${state.genre} style: ${context}` 
+                            }] 
+                        }] 
+                    })
                 });
                 
                 if (!res.ok) {
@@ -1681,12 +1687,14 @@ Knowledge cutoff	January 2025
                 const data = await res.json();
                 
                 // Validate response structure before accessing nested properties
-                if (!data || !data.predictions || !data.predictions[0] || !data.predictions[0].bytesBase64Encoded) {
+                if (!data || !data.candidates || !data.candidates[0] || 
+                    !data.candidates[0].content || !data.candidates[0].content.parts || 
+                    !data.candidates[0].content.parts[0] || !data.candidates[0].content.parts[0].inlineData) {
                     throw new Error('Invalid API response structure: missing image data');
                 }
                 
                 const img = document.getElementById('scene-image');
-                img.src = `data:image/png;base64,${data.predictions[0].bytesBase64Encoded}`;
+                img.src = `data:image/png;base64,${data.candidates[0].content.parts[0].inlineData.data}`;
                 img.onload = () => {
                     img.classList.remove('opacity-0');
                     document.getElementById('img-overlay').classList.add('opacity-0');
@@ -1909,8 +1917,10 @@ Knowledge cutoff	January 2025
                     method: 'POST',
                     headers: { 'Content-Type': 'application/json' },
                     body: JSON.stringify({ 
-                        instances: [{ 
-                            prompt: `Cinematic professional fantasy art, atmospheric, ${state.genre} style: ${promptText}` 
+                        contents: [{ 
+                            parts: [{ 
+                                text: `Cinematic professional fantasy art, atmospheric, ${state.genre} style: ${promptText}` 
+                            }] 
                         }] 
                     })
                 });
@@ -1922,11 +1932,13 @@ Knowledge cutoff	January 2025
                 const data = await res.json();
                 
                 // Validate response structure before accessing nested properties
-                if (!data || !data.predictions || !data.predictions[0] || !data.predictions[0].bytesBase64Encoded) {
+                if (!data || !data.candidates || !data.candidates[0] || 
+                    !data.candidates[0].content || !data.candidates[0].content.parts || 
+                    !data.candidates[0].content.parts[0] || !data.candidates[0].content.parts[0].inlineData) {
                     throw new Error('Invalid API response structure: missing image data');
                 }
                 
-                const imageData = `data:image/png;base64,${data.predictions[0].bytesBase64Encoded}`;
+                const imageData = `data:image/png;base64,${data.candidates[0].content.parts[0].inlineData.data}`;
                 state.imageCache.set(sentenceIdx, imageData);
                 console.log(`Pre-generated image for sentence ${sentenceIdx}`);
             } catch (err) {
