@@ -26,6 +26,7 @@ const MusicPlayer = (function () {
       audioCtx = null;
     }
     loadPlaylists();
+    updatePlaylistUI(); // Update UI after loading playlists
   }
 
   // Playlist management functions
