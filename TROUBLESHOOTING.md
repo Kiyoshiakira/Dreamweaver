@@ -56,6 +56,10 @@ firebase emulators:start --only functions
 
 ```bash
 # From the project root
+# First, make the script executable (only needed once)
+chmod +x check-config.sh
+
+# Then run it
 ./check-config.sh
 ```
 

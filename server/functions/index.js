@@ -92,11 +92,10 @@ exports.generateStory = functions.https.onRequest(async (req, res) => {
     // 4. Environment variable: GENAI_KEY
     let apiKey = null;
     
-    try {
-      // Check Firebase Functions config first (recommended for production)
-      apiKey = functions.config().genai?.key;
-    } catch (err) {
-      console.log('Firebase Functions config not available, checking environment variables');
+    // Check Firebase Functions config first (recommended for production)
+    // Use optional chaining to safely access config without throwing
+    if (functions.config().genai) {
+      apiKey = functions.config().genai.key;
     }
     
     // Fallback to environment variables
@@ -114,7 +113,7 @@ exports.generateStory = functions.https.onRequest(async (req, res) => {
       return;
     }
     
-    console.log('API key found and loaded successfully');
+    console.log('Configuration loaded successfully');
     
     // Validate and sanitize input
     const { prompt, history, systemInstruction } = req.body;
