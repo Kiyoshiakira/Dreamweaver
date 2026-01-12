@@ -8,6 +8,12 @@ server/functions/node_modules/
 .env.*.local
 server/functions/.env
 
+# Configuration files with API keys - NEVER commit these
+config.js
+config.local.js
+config.*.js
+!config.example.js
+
 # Firebase
 .firebase/
 .runtimeconfig.json

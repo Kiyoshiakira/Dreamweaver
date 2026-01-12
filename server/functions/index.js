@@ -26,6 +26,13 @@ admin.initializeApp();
  *   - Uses server-side API key (not exposed to client)
  *   - Validates and sanitizes input
  * 
+ * API Key Configuration:
+ *   The function checks for API keys in priority order:
+ *   1. functions.config().genai.key - Set via: firebase functions:config:set genai.key="YOUR_KEY"
+ *   2. process.env.DREAMWEAVER_APIKEY - Set in .env file or deployment environment
+ *   3. process.env.GEN_API_KEY - Alternative environment variable name
+ *   4. process.env.GENAI_KEY - Alternative environment variable name
+ * 
  * Rate Limiting:
  *   - TODO: Add rate limiting middleware for production use
  *   - Consider using Firebase Extensions or custom rate limiter
@@ -77,19 +84,34 @@ exports.generateStory = functions.https.onRequest(async (req, res) => {
       return;
     }
     
-    // Get API key from environment variables
-    // Set using: firebase functions:config:set dreamweaver.apikey="YOUR_API_KEY" is deprecated
-    // Use environment variables instead.
-    const apiKey = process.env.DREAMWEAVER_APIKEY;
+    // Get API key from multiple possible sources
+    // Priority order:
+    // 1. Firebase Functions config: firebase functions:config:set genai.key="YOUR_API_KEY"
+    // 2. Environment variable: DREAMWEAVER_APIKEY
+    // 3. Environment variable: GEN_API_KEY (for backward compatibility)
+    // 4. Environment variable: GENAI_KEY
+    let apiKey = null;
+    
+    // Check Firebase Functions config first (recommended for production)
+    // Use optional chaining to safely access config without throwing
+    apiKey = functions.config()?.genai?.key;
+    
+    // Fallback to environment variables
+    if (!apiKey) {
+      apiKey = process.env.DREAMWEAVER_APIKEY || process.env.GEN_API_KEY || process.env.GENAI_KEY;
+    }
     
     if (!apiKey) {
-      console.error('API key not configured');
+      console.error('API key not configured in any expected location');
+      console.error('Checked: functions.config().genai.key, DREAMWEAVER_APIKEY, GEN_API_KEY, GENAI_KEY');
       res.status(500).json({ 
         error: 'Server configuration error',
-        details: 'API key not configured'
+        details: 'API key not configured. Please set via: firebase functions:config:set genai.key="YOUR_KEY" or environment variable DREAMWEAVER_APIKEY'
       });
       return;
     }
+    
+    console.log('Configuration loaded successfully');
     
     // Validate and sanitize input
     const { prompt, history, systemInstruction } = req.body;
