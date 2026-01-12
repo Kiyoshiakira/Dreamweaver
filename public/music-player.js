@@ -264,12 +264,6 @@ const MusicPlayer = (function () {
           itemEl.appendChild(contentWrapper);
           itemEl.appendChild(btnContainer);
           playlistItemsContainer.appendChild(itemEl);
-          
-          btnContainer.appendChild(playBtn);
-          btnContainer.appendChild(removeBtn);
-          itemEl.appendChild(contentWrapper);
-          itemEl.appendChild(btnContainer);
-          playlistItemsContainer.appendChild(itemEl);
         });
       }
     }
