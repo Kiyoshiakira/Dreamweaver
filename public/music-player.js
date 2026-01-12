@@ -267,11 +267,16 @@ const MusicPlayer = (function () {
           
           btnContainer.appendChild(playBtn);
           btnContainer.appendChild(removeBtn);
-          itemEl.appendChild(nameEl);
+          itemEl.appendChild(contentWrapper);
           itemEl.appendChild(btnContainer);
           playlistItemsContainer.appendChild(itemEl);
         });
       }
+    }
+    
+    // Also update reader view playlist if available
+    if (typeof window !== 'undefined' && window.updateReaderPlaylistDisplay) {
+      window.updateReaderPlaylistDisplay();
     }
   }
 

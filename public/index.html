@@ -522,6 +522,22 @@
                                 Next
                             </button>
                         </div>
+                        
+                        <!-- Active Playlist Display -->
+                        <div id="reader-playlist-section" class="mt-4 space-y-2">
+                            <div class="flex items-center justify-between">
+                                <label class="text-indigo-400 text-[10px] font-bold uppercase tracking-wider">Active Playlist</label>
+                                <button onclick="toggleReaderPlaylist()" class="text-indigo-400 hover:text-indigo-300 text-xs transition-colors" title="Show/hide playlist">
+                                    <span id="playlist-toggle-icon">▼</span>
+                                </button>
+                            </div>
+                            <select id="reader-playlist-select" onchange="switchReaderPlaylist(this.value)" class="w-full bg-slate-800 border border-white/10 rounded-xl px-3 py-2 text-white text-xs appearance-none cursor-pointer hover:bg-slate-700 transition-colors" title="Select a playlist to play from">
+                                <option value="">No Playlist (Manual Control)</option>
+                            </select>
+                            <div id="reader-playlist-items" class="hidden space-y-1 max-h-[200px] overflow-y-auto bg-slate-800/50 rounded-xl p-2">
+                                <div class="text-xs text-slate-400 text-center py-2">No playlist selected</div>
+                            </div>
+                        </div>
                     </div>
                 </div>
             </div>
@@ -2131,6 +2147,11 @@
             document.getElementById('view-home').classList.toggle('hidden', v !== 'home');
             document.getElementById('view-reader').classList.toggle('hidden', v !== 'reader');
             document.getElementById('control-panel').classList.toggle('hidden', v !== 'reader');
+            
+            // Update reader playlist display when switching to reader view
+            if (v === 'reader') {
+                updateReaderPlaylistDisplay();
+            }
         }
         
         function updateMusicDisplayForSource(source) {
@@ -2314,6 +2335,155 @@
                 console.warn('Failed to play Spotify track from playlist');
             }
         };
+        
+        // Toggle playlist visibility in reader view
+        function toggleReaderPlaylist() {
+            const itemsDiv = document.getElementById('reader-playlist-items');
+            const icon = document.getElementById('playlist-toggle-icon');
+            if (itemsDiv.classList.contains('hidden')) {
+                itemsDiv.classList.remove('hidden');
+                icon.textContent = '▲';
+            } else {
+                itemsDiv.classList.add('hidden');
+                icon.textContent = '▼';
+            }
+        }
+        
+        // Switch active playlist in reader view
+        function switchReaderPlaylist(playlistId) {
+            if (playlistId && typeof MusicPlayer !== 'undefined') {
+                MusicPlayer.loadPlaylist(playlistId);
+                updateReaderPlaylistDisplay();
+            } else {
+                // No playlist selected
+                const itemsDiv = document.getElementById('reader-playlist-items');
+                itemsDiv.innerHTML = '<div class="text-xs text-slate-400 text-center py-2">No playlist selected</div>';
+            }
+        }
+        
+        // Update reader playlist display
+        function updateReaderPlaylistDisplay() {
+            if (typeof MusicPlayer === 'undefined') return;
+            
+            const debugState = MusicPlayer._debugState();
+            const playlists = MusicPlayer.getPlaylists();
+            const activePlaylistId = MusicPlayer.getActivePlaylist();
+            
+            // Update dropdown
+            const select = document.getElementById('reader-playlist-select');
+            if (select) {
+                select.innerHTML = '<option value="">No Playlist (Manual Control)</option>';
+                Object.keys(playlists).forEach(id => {
+                    const option = document.createElement('option');
+                    option.value = id;
+                    option.textContent = playlists[id].name + ' (' + playlists[id].items.length + ' items)';
+                    if (id === activePlaylistId) option.selected = true;
+                    select.appendChild(option);
+                });
+            }
+            
+            // Update items display
+            const itemsDiv = document.getElementById('reader-playlist-items');
+            if (!itemsDiv || !activePlaylistId || !playlists[activePlaylistId]) {
+                if (itemsDiv) {
+                    itemsDiv.innerHTML = '<div class="text-xs text-slate-400 text-center py-2">No playlist selected</div>';
+                }
+                return;
+            }
+            
+            const playlist = playlists[activePlaylistId];
+            const playlistIndex = debugState.playlistIndex || 0;
+            itemsDiv.innerHTML = '';
+            
+            if (playlist.items.length === 0) {
+                itemsDiv.innerHTML = '<div class="text-xs text-slate-400 text-center py-2">Playlist is empty</div>';
+                return;
+            }
+            
+            playlist.items.forEach((item, index) => {
+                const itemEl = document.createElement('div');
+                itemEl.className = 'flex items-center justify-between p-2 rounded-lg hover:bg-slate-700/50 transition-colors cursor-pointer';
+                
+                // Highlight currently playing item
+                if (index === playlistIndex && activePlaylistId) {
+                    itemEl.className += ' bg-indigo-600/20 border border-indigo-500/30';
+                }
+                
+                // Add icon based on source type
+                const iconEl = document.createElement('span');
+                iconEl.className = 'text-xs mr-2';
+                if (item.type === 'spotify') {
+                    iconEl.innerHTML = '🎵';
+                } else if (item.type === 'youtube') {
+                    iconEl.innerHTML = '▶️';
+                } else if (item.type === 'local') {
+                    iconEl.innerHTML = '📁';
+                }
+                
+                const nameEl = document.createElement('span');
+                nameEl.className = 'text-xs flex-1 truncate';
+                nameEl.textContent = item.name;
+                
+                // Highlight currently playing
+                if (index === playlistIndex && activePlaylistId) {
+                    nameEl.className += ' text-indigo-300 font-bold';
+                } else {
+                    nameEl.className += ' text-slate-300';
+                }
+                
+                const contentWrapper = document.createElement('div');
+                contentWrapper.className = 'flex items-center flex-1 min-w-0';
+                contentWrapper.appendChild(iconEl);
+                contentWrapper.appendChild(nameEl);
+                
+                // Click to play this item
+                itemEl.onclick = () => {
+                    if (typeof MusicPlayer !== 'undefined' && MusicPlayer._debugState) {
+                        // Use the internal playPlaylistItem through the exposed next/prev
+                        // Or we can add a new exposed function
+                        playPlaylistItemByIndex(index);
+                    }
+                };
+                
+                itemEl.appendChild(contentWrapper);
+                itemsDiv.appendChild(itemEl);
+            });
+        }
+        
+        // Play specific playlist item by index
+        function playPlaylistItemByIndex(index) {
+            if (typeof MusicPlayer === 'undefined') return;
+            
+            const debugState = MusicPlayer._debugState();
+            const activePlaylistId = MusicPlayer.getActivePlaylist();
+            const playlists = MusicPlayer.getPlaylists();
+            
+            if (!activePlaylistId || !playlists[activePlaylistId]) return;
+            
+            const playlist = playlists[activePlaylistId];
+            if (index < 0 || index >= playlist.items.length) return;
+            
+            const item = playlist.items[index];
+            
+            // Handle different source types
+            if (item.type === 'youtube') {
+                const musicSource = document.getElementById('music-source-select');
+                if (musicSource) musicSource.value = 'youtube';
+                MusicPlayer.setSource('youtube');
+                MusicPlayer.loadYouTubeAndPlay(item.data);
+            } else if (item.type === 'spotify') {
+                const musicSource = document.getElementById('music-source-select');
+                if (musicSource) musicSource.value = 'spotify';
+                if (window.playSpotifyTrackFromPlaylist) {
+                    window.playSpotifyTrackFromPlaylist(item.data);
+                }
+            } else if (item.type === 'local') {
+                alert('Local files are session-only. Please upload the file again to play it.');
+            }
+            
+            // Update display to show current item
+            updateReaderPlaylistDisplay();
+        }
 
         window.onload = () => {
             // Check for file:// protocol and show warning banner
