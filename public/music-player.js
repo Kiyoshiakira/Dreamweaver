@@ -104,11 +104,22 @@ const MusicPlayer = (function () {
     if (item.type === 'youtube') {
       setSource('youtube');
       loadYouTubeAndPlay(item.data);
+    } else if (item.type === 'spotify') {
+      // Spotify track - trigger playback via global state
+      // The data contains { uri, id, name, artist, previewUrl }
+      setSource('spotify');
+      // Notify main app about Spotify track selection
+      if (window.playSpotifyTrackFromPlaylist) {
+        window.playSpotifyTrackFromPlaylist(item.data);
+      } else {
+        console.warn('Spotify playback not available - please ensure Spotify is connected');
+        alert('Spotify playback requires being logged in to Spotify. Please connect Spotify first.');
+      }
     } else if (item.type === 'local') {
-      // Local files from playlist need special handling since they're blob URLs
-      // For now, we'll show a message that local files need to be re-uploaded
-      console.warn('Local file playback from saved playlists not supported - files must be re-uploaded');
-      alert('Local files cannot be played from saved playlists. Please upload the file again.');
+      // Local files from playlist: store file metadata but not blob URL
+      // User needs to re-upload the file or we need file persistence
+      console.warn('Local file playback from saved playlists not fully supported - files are session-only');
+      alert('Local files are only available during the current session. To play this file, please upload it again using the "Local Files" option.');
       nextPlaylistItem();
     }
   }
@@ -175,31 +186,7 @@ const MusicPlayer = (function () {
       });
     }
 
-    // Add current YouTube URL to playlist
-    const addToPlaylistBtn = document.getElementById('add-to-playlist-btn');
-    if (addToPlaylistBtn) {
-      addToPlaylistBtn.addEventListener('click', () => {
-        const ytInput = document.getElementById('youtube-url-input');
-        const playlistSelect = document.getElementById('playlist-select');
-        
-        if (!playlistSelect || !playlistSelect.value) {
-          alert('Please create a playlist first');
-          return;
-        }
-        
-        if (ytInput && ytInput.value.trim()) {
-          const id = parseYouTubeId(ytInput.value.trim());
-          if (id) {
-            addToPlaylist(playlistSelect.value, 'youtube', id, `YouTube: ${id}`);
-            alert('Added to playlist!');
-          } else {
-            alert('Please enter a valid YouTube URL or ID');
-          }
-        } else {
-          alert('Please enter a YouTube URL first');
-        }
-      });
-    }
+    // Note: Add to playlist button handler is in index.html as addCurrentTrackToPlaylist()
   }
 
   function updatePlaylistUI() {
@@ -223,11 +210,25 @@ const MusicPlayer = (function () {
       playlistItemsContainer.innerHTML = '';
       
       if (playlist.items.length === 0) {
-        playlistItemsContainer.innerHTML = '<div class="text-xs text-slate-400 p-2">No items in playlist. Add YouTube URLs or local files.</div>';
+        playlistItemsContainer.innerHTML = '<div class="text-xs text-slate-400 p-2">No items in playlist. Add tracks from Spotify, YouTube, or local files.</div>';
       } else {
         playlist.items.forEach((item, index) => {
           const itemEl = document.createElement('div');
           itemEl.className = 'flex items-center justify-between p-2 bg-slate-800 rounded-lg hover:bg-slate-700 transition-colors';
+          
+          // Add icon based on source type
+          const iconEl = document.createElement('span');
+          iconEl.className = 'text-xs mr-2';
+          if (item.type === 'spotify') {
+            iconEl.innerHTML = '🎵'; // Spotify icon
+            iconEl.title = 'Spotify Track';
+          } else if (item.type === 'youtube') {
+            iconEl.innerHTML = '▶️'; // YouTube icon
+            iconEl.title = 'YouTube Video';
+          } else if (item.type === 'local') {
+            iconEl.innerHTML = '📁'; // Local file icon
+            iconEl.title = 'Local File';
+          }
           
           const nameEl = document.createElement('span');
           nameEl.className = 'text-xs text-slate-300 flex-1 truncate';
@@ -235,6 +236,11 @@ const MusicPlayer = (function () {
           if (index === playlistIndex && activePlaylistId) {
             nameEl.className = 'text-xs text-green-400 flex-1 truncate font-bold';
           }
+          
+          const contentWrapper = document.createElement('div');
+          contentWrapper.className = 'flex items-center flex-1 min-w-0';
+          contentWrapper.appendChild(iconEl);
+          contentWrapper.appendChild(nameEl);
           
           const btnContainer = document.createElement('div');
           btnContainer.className = 'flex gap-1';
@@ -252,6 +258,12 @@ const MusicPlayer = (function () {
               removeFromPlaylist(activePlaylistId, index);
             }
           };
+          
+          btnContainer.appendChild(playBtn);
+          btnContainer.appendChild(removeBtn);
+          itemEl.appendChild(contentWrapper);
+          itemEl.appendChild(btnContainer);
+          playlistItemsContainer.appendChild(itemEl);
           
           btnContainer.appendChild(playBtn);
           btnContainer.appendChild(removeBtn);

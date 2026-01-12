@@ -409,7 +409,7 @@
                 <div id="playlist-controls" class="space-y-2 p-6 bg-slate-900/50 border border-indigo-500/20 rounded-2xl">
                     <div class="space-y-3">
                         <label class="text-indigo-400 text-[11px] font-black uppercase tracking-widest">Playlists</label>
-                        <p class="text-slate-400 text-xs">Create playlists to organize your YouTube URLs. Playlists are saved across sessions.</p>
+                        <p class="text-slate-400 text-xs">Create playlists to organize your music from Spotify, YouTube, and local files. Playlists are saved across sessions.</p>
                         
                         <div class="flex flex-wrap items-center gap-3">
                             <select id="playlist-select" class="bg-slate-900 border border-white/10 rounded-xl px-4 py-2 text-white text-sm appearance-none cursor-pointer hover:bg-slate-800 transition-colors flex-1 min-w-[200px]" title="Select a playlist to view and manage">
@@ -426,10 +426,10 @@
                             </button>
                         </div>
                         
-                        <!-- Add YouTube URL to Playlist -->
+                        <!-- Add Current Track to Playlist -->
                         <div class="flex items-center gap-2 p-3 bg-slate-800/50 rounded-xl">
-                            <span class="text-xs text-slate-400">Add current YouTube URL to playlist:</span>
-                            <button id="add-to-playlist-btn" class="px-3 py-1 bg-indigo-600 hover:bg-indigo-500 rounded-lg font-bold text-xs transition-all active:scale-95" title="Add the YouTube URL from above to the selected playlist">
+                            <span class="text-xs text-slate-400 flex-1">Add current track to playlist:</span>
+                            <button id="add-current-to-playlist-btn" class="px-3 py-1 bg-indigo-600 hover:bg-indigo-500 rounded-lg font-bold text-xs transition-all active:scale-95" title="Add the current music source (Spotify track, YouTube video, or local file) to the selected playlist" onclick="addCurrentTrackToPlaylist()">
                                 Add to Playlist
                             </button>
                         </div>
@@ -2226,6 +2226,94 @@
                 }
             }
         }
+        
+        // Add current track to playlist based on selected music source
+        function addCurrentTrackToPlaylist() {
+            const playlistSelect = document.getElementById('playlist-select');
+            if (!playlistSelect || !playlistSelect.value) {
+                alert('Please select or create a playlist first');
+                return;
+            }
+            
+            const musicSource = document.getElementById('music-source-select')?.value || 'spotify';
+            
+            if (musicSource === 'spotify') {
+                // Add Spotify track
+                if (state.currentSpotifyTrack) {
+                    const trackData = {
+                        uri: state.currentSpotifyTrack.uri,
+                        id: state.currentSpotifyTrack.id,
+                        name: state.currentSpotifyTrack.name,
+                        artist: state.currentSpotifyTrack.artists[0].name,
+                        previewUrl: state.currentSpotifyTrack.preview_url
+                    };
+                    const trackName = `${trackData.name} - ${trackData.artist}`;
+                    MusicPlayer.addToPlaylist(playlistSelect.value, 'spotify', trackData, trackName);
+                    alert('Spotify track added to playlist!');
+                } else {
+                    alert('No Spotify track is currently playing. Please play a track first or connect to Spotify.');
+                }
+            } else if (musicSource === 'youtube') {
+                // Add YouTube video
+                const ytInput = document.getElementById('youtube-url-input');
+                if (ytInput && ytInput.value.trim()) {
+                    // Use MusicPlayer's parseYouTubeId function or extract it ourselves
+                    const val = ytInput.value.trim();
+                    let id = null;
+                    
+                    // Simple YouTube ID extraction
+                    try {
+                        if (val.length === 11 && /^[A-Za-z0-9_-]+$/.test(val)) {
+                            id = val;
+                        } else {
+                            const u = new URL(val);
+                            if (u.hostname === 'www.youtube.com' || u.hostname === 'youtube.com' || u.hostname === 'm.youtube.com') {
+                                id = u.searchParams.get('v');
+                            } else if (u.hostname === 'youtu.be') {
+                                id = u.pathname.slice(1);
+                            }
+                        }
+                    } catch (e) {
+                        if (val.length === 11) id = val;
+                    }
+                    
+                    if (id) {
+                        MusicPlayer.addToPlaylist(playlistSelect.value, 'youtube', id, `YouTube: ${id}`);
+                        alert('YouTube video added to playlist!');
+                    } else {
+                        alert('Please enter a valid YouTube URL or ID first');
+                    }
+                } else {
+                    alert('Please enter a YouTube URL first');
+                }
+            } else if (musicSource === 'local') {
+                // Local files - add metadata note
+                alert('Local files are session-only and cannot be permanently saved to playlists. To use local files across sessions, please re-upload them each time.');
+            }
+        }
+        
+        // Function to play Spotify track from playlist
+        window.playSpotifyTrackFromPlaylist = async function(trackData) {
+            if (!state.spotifyAccessToken) {
+                alert('Please connect to Spotify first to play this track.');
+                return;
+            }
+            
+            // Create a track object compatible with playSpotifyTrack
+            const track = {
+                uri: trackData.uri,
+                id: trackData.id,
+                name: trackData.name,
+                artists: [{ name: trackData.artist }],
+                preview_url: trackData.previewUrl
+            };
+            
+            // Use existing playSpotifyTrack function
+            const success = await playSpotifyTrack(track);
+            if (!success) {
+                console.warn('Failed to play Spotify track from playlist');
+            }
+        };
 
         window.onload = () => {
             // Check for file:// protocol and show warning banner
