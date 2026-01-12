@@ -38,8 +38,13 @@ echo ""
 # Check Firebase Functions config
 echo "3. Checking Firebase Functions config..."
 if [ -f ".firebaserc" ]; then
-    PROJECT_ID=$(cat .firebaserc | grep "default" | cut -d'"' -f4)
-    echo "   Project ID: $PROJECT_ID"
+    # Try to extract project ID, handle parsing failures gracefully
+    PROJECT_ID=$(cat .firebaserc 2>/dev/null | grep "default" 2>/dev/null | cut -d'"' -f4 2>/dev/null)
+    if [ -n "$PROJECT_ID" ]; then
+        echo "   Project ID: $PROJECT_ID"
+    else
+        echo "   Could not parse project ID from .firebaserc"
+    fi
     
     CONFIG_OUTPUT=$(firebase functions:config:get 2>&1)
     if echo "$CONFIG_OUTPUT" | grep -q "genai"; then

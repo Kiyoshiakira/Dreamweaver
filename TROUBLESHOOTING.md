@@ -183,7 +183,7 @@ If you're still having issues:
 
 1. Check the detailed logs:
    ```bash
-   firebase functions:log --only generateStory
+   firebase functions:log --limit 50
    ```
 
 2. Review the full setup guide: [server/README.md](server/README.md)

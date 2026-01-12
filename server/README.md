@@ -356,7 +356,7 @@ firebase functions:log --only generateStory
 
 5. **Verify the function can access the key**:
    - Check function logs: `firebase functions:log`
-   - Look for "API key found and loaded successfully" message
+   - Look for "Configuration loaded successfully" message
    - If you see "API key not configured in any expected location", the key isn't accessible
 
 **Common Mistakes**:

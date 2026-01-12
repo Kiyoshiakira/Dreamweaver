@@ -94,9 +94,7 @@ exports.generateStory = functions.https.onRequest(async (req, res) => {
     
     // Check Firebase Functions config first (recommended for production)
     // Use optional chaining to safely access config without throwing
-    if (functions.config().genai) {
-      apiKey = functions.config().genai.key;
-    }
+    apiKey = functions.config()?.genai?.key;
     
     // Fallback to environment variables
     if (!apiKey) {
