@@ -475,6 +475,47 @@ Knowledge cutoff	January 2025
                     </div>
                 </div>
                 
+                <!-- Playlist Management Section -->
+                <div id="playlist-controls" class="space-y-2 p-6 bg-slate-900/50 border border-indigo-500/20 rounded-2xl">
+                    <div class="space-y-3">
+                        <label class="text-indigo-400 text-[11px] font-black uppercase tracking-widest">Playlists</label>
+                        <p class="text-slate-400 text-xs">Create playlists to organize your YouTube URLs. Playlists are saved across sessions.</p>
+                        
+                        <div class="flex flex-wrap items-center gap-3">
+                            <select id="playlist-select" class="bg-slate-900 border border-white/10 rounded-xl px-4 py-2 text-white text-sm appearance-none cursor-pointer hover:bg-slate-800 transition-colors flex-1 min-w-[200px]" title="Select a playlist to view and manage">
+                                <option value="">Select a playlist...</option>
+                            </select>
+                            
+                            <button id="create-playlist-btn" class="px-4 py-2 bg-green-600 hover:bg-green-500 rounded-xl font-bold text-sm transition-all active:scale-95 flex items-center gap-2" title="Create a new playlist">
+                                <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><line x1="12" y1="5" x2="12" y2="19"></line><line x1="5" y1="12" x2="19" y2="12"></line></svg>
+                                New Playlist
+                            </button>
+                            
+                            <button id="delete-playlist-btn" class="px-4 py-2 bg-red-600 hover:bg-red-500 rounded-xl font-bold text-sm transition-all active:scale-95" title="Delete the selected playlist" onclick="deleteCurrentPlaylist()">
+                                Delete
+                            </button>
+                        </div>
+                        
+                        <!-- Add YouTube URL to Playlist -->
+                        <div class="flex items-center gap-2 p-3 bg-slate-800/50 rounded-xl">
+                            <span class="text-xs text-slate-400">Add current YouTube URL to playlist:</span>
+                            <button id="add-to-playlist-btn" class="px-3 py-1 bg-indigo-600 hover:bg-indigo-500 rounded-lg font-bold text-xs transition-all active:scale-95" title="Add the YouTube URL from above to the selected playlist">
+                                Add to Playlist
+                            </button>
+                        </div>
+                        
+                        <!-- Playlist Items Display -->
+                        <div class="mt-3 p-3 bg-slate-800 border border-indigo-500/30 rounded-xl">
+                            <div class="flex items-center justify-between mb-2">
+                                <span class="text-xs font-bold text-white uppercase tracking-wider">Playlist Items</span>
+                            </div>
+                            <div id="playlist-items-container" class="space-y-1 max-h-[200px] overflow-y-auto">
+                                <div class="text-xs text-slate-400">Select a playlist to view items</div>
+                            </div>
+                        </div>
+                    </div>
+                </div>
+                
                 <div class="space-y-2">
                     <label class="text-indigo-400 text-[11px] font-black uppercase tracking-widest ml-1">Story Prompt</label>
                     <textarea id="prompt-input" class="w-full bg-slate-900 border border-white/10 rounded-3xl p-6 text-white h-40 focus:ring-2 ring-indigo-500 outline-none resize-none text-lg leading-relaxed" placeholder="What story would you like to hear? Describe your characters, setting, or adventure..." title="Describe the story you want to experience. AI will generate a narrative based on your prompt, continuing for the selected duration"></textarea>
@@ -535,6 +576,22 @@ Knowledge cutoff	January 2025
                             <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M1 4v6h6M23 20v-6h-6"></path><path d="M20.49 9A9 9 0 0 0 5.64 5.64L1 10m22 4l-4.64 4.36A9 9 0 0 1 3.51 15"></path></svg>
                             Change Song
                         </button>
+                        
+                        <!-- Music Playback Controls -->
+                        <div class="grid grid-cols-3 gap-2 mt-3">
+                            <button onclick="musicPrev()" class="py-2 bg-slate-700 hover:bg-slate-600 rounded-xl font-bold text-xs transition-all active:scale-95 flex items-center justify-center gap-1" title="Previous track in playlist or queue">
+                                <svg width="16" height="16" viewBox="0 0 24 24" fill="currentColor"><path d="M6 6h2v12H6zm3.5 6l8.5 6V6z"></path></svg>
+                                Prev
+                            </button>
+                            <button onclick="musicReplay()" class="py-2 bg-slate-700 hover:bg-slate-600 rounded-xl font-bold text-xs transition-all active:scale-95 flex items-center justify-center gap-1" title="Replay current track from the beginning">
+                                <svg width="16" height="16" viewBox="0 0 24 24" fill="currentColor"><path d="M12 5V1L7 6l5 5V7c3.31 0 6 2.69 6 6s-2.69 6-6 6-6-2.69-6-6H4c0 4.42 3.58 8 8 8s8-3.58 8-8-3.58-8-8-8z"></path></svg>
+                                Replay
+                            </button>
+                            <button onclick="musicNext()" class="py-2 bg-slate-700 hover:bg-slate-600 rounded-xl font-bold text-xs transition-all active:scale-95 flex items-center justify-center gap-1" title="Next track in playlist or queue">
+                                <svg width="16" height="16" viewBox="0 0 24 24" fill="currentColor"><path d="M16 18h2V6h-2zm-11-7l8.5-6v12z"></path></svg>
+                                Next
+                            </button>
+                        </div>
                     </div>
                 </div>
             </div>
@@ -2193,6 +2250,40 @@ Knowledge cutoff	January 2025
                 }
             }
         }
+        
+        // Music playback control functions for playlist/queue navigation
+        function musicPrev() {
+            if (typeof MusicPlayer !== 'undefined') {
+                MusicPlayer.prev();
+            }
+        }
+        
+        function musicNext() {
+            if (typeof MusicPlayer !== 'undefined') {
+                MusicPlayer.next();
+            }
+        }
+        
+        function musicReplay() {
+            if (typeof MusicPlayer !== 'undefined') {
+                MusicPlayer.replay();
+            }
+        }
+        
+        // Delete current playlist function
+        function deleteCurrentPlaylist() {
+            const playlistSelect = document.getElementById('playlist-select');
+            if (!playlistSelect || !playlistSelect.value) {
+                alert('Please select a playlist to delete');
+                return;
+            }
+            
+            if (confirm('Are you sure you want to delete this playlist? This cannot be undone.')) {
+                if (typeof MusicPlayer !== 'undefined') {
+                    MusicPlayer.deletePlaylist(playlistSelect.value);
+                }
+            }
+        }
 
         window.onload = () => {
             // Check for file:// protocol and show warning banner
@@ -2270,6 +2361,16 @@ Knowledge cutoff	January 2025
             // Initialize Spotify
             handleSpotifyCallback();
             restoreSpotifySession();
+            
+            // Setup playlist selector event listener
+            const playlistSelect = document.getElementById('playlist-select');
+            if (playlistSelect) {
+                playlistSelect.addEventListener('change', (e) => {
+                    if (e.target.value && typeof MusicPlayer !== 'undefined') {
+                        MusicPlayer.loadPlaylist(e.target.value);
+                    }
+                });
+            }
         };
     </script>
     
