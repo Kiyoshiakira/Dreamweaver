@@ -12,6 +12,11 @@ const MusicPlayer = (function () {
   let ytQueue = [];
   let ytIndex = 0;
 
+  // Playlists - persistent storage for user-created playlists
+  let playlists = {}; // { playlistId: { name, items: [{ type: 'local'|'youtube', data, name }] } }
+  let activePlaylistId = null;
+  let playlistIndex = 0;
+
   async function init() {
     attachUI();
     try {
@@ -19,6 +24,122 @@ const MusicPlayer = (function () {
     } catch (e) {
       console.warn('Web Audio API not supported, falling back to HTMLAudioElement volume control.');
       audioCtx = null;
+    }
+    loadPlaylists();
+    updatePlaylistUI(); // Update UI after loading playlists
+  }
+
+  // Playlist management functions
+  function loadPlaylists() {
+    try {
+      const stored = localStorage.getItem('dreamweaver_playlists');
+      if (stored) {
+        playlists = JSON.parse(stored);
+      }
+    } catch (e) {
+      console.warn('Failed to load playlists from localStorage:', e);
+      playlists = {};
+    }
+  }
+
+  function savePlaylists() {
+    try {
+      localStorage.setItem('dreamweaver_playlists', JSON.stringify(playlists));
+    } catch (e) {
+      console.warn('Failed to save playlists to localStorage:', e);
+    }
+  }
+
+  function createPlaylist(name) {
+    const id = 'pl_' + Date.now() + '_' + Math.random().toString(36).substring(2, 11);
+    playlists[id] = {
+      name: name || 'Untitled Playlist',
+      items: [],
+      created: Date.now()
+    };
+    savePlaylists();
+    updatePlaylistUI();
+    return id;
+  }
+
+  function deletePlaylist(playlistId) {
+    if (activePlaylistId === playlistId) {
+      activePlaylistId = null;
+      playlistIndex = 0;
+    }
+    delete playlists[playlistId];
+    savePlaylists();
+    updatePlaylistUI();
+  }
+
+  function addToPlaylist(playlistId, type, data, name) {
+    if (!playlists[playlistId]) return;
+    playlists[playlistId].items.push({ type, data, name });
+    savePlaylists();
+    updatePlaylistUI();
+  }
+
+  function removeFromPlaylist(playlistId, itemIndex) {
+    if (!playlists[playlistId]) return;
+    playlists[playlistId].items.splice(itemIndex, 1);
+    savePlaylists();
+    updatePlaylistUI();
+  }
+
+  function loadPlaylist(playlistId) {
+    if (!playlists[playlistId]) return;
+    activePlaylistId = playlistId;
+    playlistIndex = 0;
+    updatePlaylistUI();
+  }
+
+  function playPlaylistItem(index) {
+    if (!activePlaylistId || !playlists[activePlaylistId]) return;
+    const playlist = playlists[activePlaylistId];
+    if (index < 0 || index >= playlist.items.length) return;
+    
+    playlistIndex = index;
+    const item = playlist.items[index];
+    
+    if (item.type === 'youtube') {
+      setSource('youtube');
+      loadYouTubeAndPlay(item.data);
+    } else if (item.type === 'local') {
+      // Local files from playlist need special handling since they're blob URLs
+      // For now, we'll show a message that local files need to be re-uploaded
+      console.warn('Local file playback from saved playlists not supported - files must be re-uploaded');
+      alert('Local files cannot be played from saved playlists. Please upload the file again.');
+      nextPlaylistItem();
+    }
+  }
+
+  function nextPlaylistItem() {
+    if (!activePlaylistId || !playlists[activePlaylistId]) return;
+    const playlist = playlists[activePlaylistId];
+    if (playlist.items.length === 0) return;
+    
+    playlistIndex = (playlistIndex + 1) % playlist.items.length;
+    playPlaylistItem(playlistIndex);
+  }
+
+  function prevPlaylistItem() {
+    if (!activePlaylistId || !playlists[activePlaylistId]) return;
+    const playlist = playlists[activePlaylistId];
+    if (playlist.items.length === 0) return;
+    
+    playlistIndex = (playlistIndex - 1 + playlist.items.length) % playlist.items.length;
+    playPlaylistItem(playlistIndex);
+  }
+
+  function replayCurrentItem() {
+    if (activePlaylistId && playlists[activePlaylistId]) {
+      playPlaylistItem(playlistIndex);
+    } else if (source === 'youtube' && ytPlayer) {
+      ytPlayer.seekTo(0);
+      ytPlayer.playVideo();
+    } else if (source === 'local' && localAudio) {
+      localAudio.currentTime = 0;
+      localAudio.play();
     }
   }
 
@@ -37,6 +158,109 @@ const MusicPlayer = (function () {
       if (!id) return alert('Please paste a valid YouTube URL or ID.');
       loadYouTubeAndPlay(id);
     });
+    
+    // Attach playlist UI handlers
+    attachPlaylistUI();
+  }
+
+  function attachPlaylistUI() {
+    // Create playlist button
+    const createPlaylistBtn = document.getElementById('create-playlist-btn');
+    if (createPlaylistBtn) {
+      createPlaylistBtn.addEventListener('click', () => {
+        const name = prompt('Enter playlist name:', 'My Playlist');
+        if (name) {
+          createPlaylist(name);
+        }
+      });
+    }
+
+    // Add current YouTube URL to playlist
+    const addToPlaylistBtn = document.getElementById('add-to-playlist-btn');
+    if (addToPlaylistBtn) {
+      addToPlaylistBtn.addEventListener('click', () => {
+        const ytInput = document.getElementById('youtube-url-input');
+        const playlistSelect = document.getElementById('playlist-select');
+        
+        if (!playlistSelect || !playlistSelect.value) {
+          alert('Please create a playlist first');
+          return;
+        }
+        
+        if (ytInput && ytInput.value.trim()) {
+          const id = parseYouTubeId(ytInput.value.trim());
+          if (id) {
+            addToPlaylist(playlistSelect.value, 'youtube', id, `YouTube: ${id}`);
+            alert('Added to playlist!');
+          } else {
+            alert('Please enter a valid YouTube URL or ID');
+          }
+        } else {
+          alert('Please enter a YouTube URL first');
+        }
+      });
+    }
+  }
+
+  function updatePlaylistUI() {
+    // Update playlist selector dropdown
+    const playlistSelect = document.getElementById('playlist-select');
+    if (playlistSelect) {
+      playlistSelect.innerHTML = '<option value="">Select a playlist...</option>';
+      Object.keys(playlists).forEach(id => {
+        const option = document.createElement('option');
+        option.value = id;
+        option.textContent = playlists[id].name + ' (' + playlists[id].items.length + ' items)';
+        if (id === activePlaylistId) option.selected = true;
+        playlistSelect.appendChild(option);
+      });
+    }
+
+    // Update playlist items display
+    const playlistItemsContainer = document.getElementById('playlist-items-container');
+    if (playlistItemsContainer && activePlaylistId && playlists[activePlaylistId]) {
+      const playlist = playlists[activePlaylistId];
+      playlistItemsContainer.innerHTML = '';
+      
+      if (playlist.items.length === 0) {
+        playlistItemsContainer.innerHTML = '<div class="text-xs text-slate-400 p-2">No items in playlist. Add YouTube URLs or local files.</div>';
+      } else {
+        playlist.items.forEach((item, index) => {
+          const itemEl = document.createElement('div');
+          itemEl.className = 'flex items-center justify-between p-2 bg-slate-800 rounded-lg hover:bg-slate-700 transition-colors';
+          
+          const nameEl = document.createElement('span');
+          nameEl.className = 'text-xs text-slate-300 flex-1 truncate';
+          nameEl.textContent = `${index + 1}. ${item.name}`;
+          if (index === playlistIndex && activePlaylistId) {
+            nameEl.className = 'text-xs text-green-400 flex-1 truncate font-bold';
+          }
+          
+          const btnContainer = document.createElement('div');
+          btnContainer.className = 'flex gap-1';
+          
+          const playBtn = document.createElement('button');
+          playBtn.className = 'px-2 py-1 bg-indigo-600 hover:bg-indigo-500 rounded text-xs';
+          playBtn.textContent = 'Play';
+          playBtn.onclick = () => playPlaylistItem(index);
+          
+          const removeBtn = document.createElement('button');
+          removeBtn.className = 'px-2 py-1 bg-red-600 hover:bg-red-500 rounded text-xs';
+          removeBtn.textContent = 'Remove';
+          removeBtn.onclick = () => {
+            if (confirm('Remove this item from playlist?')) {
+              removeFromPlaylist(activePlaylistId, index);
+            }
+          };
+          
+          btnContainer.appendChild(playBtn);
+          btnContainer.appendChild(removeBtn);
+          itemEl.appendChild(nameEl);
+          itemEl.appendChild(btnContainer);
+          playlistItemsContainer.appendChild(itemEl);
+        });
+      }
+    }
   }
 
   function setSource(s) {
@@ -255,7 +479,35 @@ const MusicPlayer = (function () {
   // Unified controls
   function play() { if (source === 'local') playLocal(); else if (source === 'youtube') playYouTube(); else console.log('Spotify selected - use Spotify controls'); }
   function pause() { if (source === 'local') pauseLocal(); else if (source === 'youtube') pauseYouTube(); else console.log('Spotify selected - use Spotify controls'); }
-  function next() { if (source === 'local') nextLocal(); else if (source === 'youtube') nextYouTube(); else console.log('Spotify selected - use Spotify controls'); }
+  function next() { 
+    if (activePlaylistId) {
+      nextPlaylistItem();
+    } else if (source === 'local') {
+      nextLocal();
+    } else if (source === 'youtube') {
+      nextYouTube();
+    } else {
+      console.log('Spotify selected - use Spotify controls');
+    }
+  }
+  
+  function prev() {
+    if (activePlaylistId) {
+      prevPlaylistItem();
+    } else if (source === 'local' && localTracks.length > 0) {
+      localIndex = (localIndex - 1 + localTracks.length) % localTracks.length;
+      playLocal(localIndex);
+    } else if (source === 'youtube' && ytQueue.length > 0) {
+      ytIndex = (ytIndex - 1 + ytQueue.length) % ytQueue.length;
+      loadYouTubeAndPlay(ytQueue[ytIndex]);
+    } else {
+      console.log('Spotify selected or no tracks available');
+    }
+  }
+  
+  function replay() {
+    replayCurrentItem();
+  }
 
   function setVolume(vol) {
     if (source === 'local' && localTracks[localIndex] && localTracks[localIndex]._gainNode) {
@@ -329,8 +581,18 @@ const MusicPlayer = (function () {
     play,
     pause,
     next,
+    prev,
+    replay,
     setVolume,
     loadYouTubeAndPlay,
-    _debugState: () => ({ source, localTracks, localIndex, ytQueue, ytIndex }),
+    // Playlist functions
+    createPlaylist,
+    deletePlaylist,
+    addToPlaylist,
+    removeFromPlaylist,
+    loadPlaylist,
+    getPlaylists: () => playlists,
+    getActivePlaylist: () => activePlaylistId,
+    _debugState: () => ({ source, localTracks, localIndex, ytQueue, ytIndex, playlists, activePlaylistId, playlistIndex }),
   };
 })();
