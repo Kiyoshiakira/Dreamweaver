@@ -224,17 +224,26 @@
 </head>
 <body class="selection:bg-indigo-500/30">
     <script>
+       // Firebase Configuration
+       // Get your Firebase config from: https://console.firebase.google.com/
+       // Project Settings > General > Your apps > Web app
+       // 
+       // IMPORTANT: Replace the values below with your own Firebase project config
+       // DO NOT commit real API keys to public repositories
        const __firebase_config = JSON.stringify({
-            apiKey: "AIzaSyAh_tqmJftUKUDSlkLMmW-ITZWKn7NTe0M",
-            authDomain: "dreamweaver-10d8e.firebaseapp.com",
-            projectId: "dreamweaver-10d8e",
-            storageBucket: "dreamweaver-10d8e.firebasestorage.app",
-            messagingSenderId: "58607480142",
-            appId: "1:58607480142:web:d2502ca74a7b69e2bb021f",
-            measurementId: "G-J9V0ZBQCEK"
+            apiKey: "YOUR_FIREBASE_API_KEY",
+            authDomain: "your-project.firebaseapp.com",
+            projectId: "your-project-id",
+            storageBucket: "your-project.firebasestorage.app",
+            messagingSenderId: "123456789",
+            appId: "1:123456789:web:abcdef123456",
+            measurementId: "G-XXXXXXXXXX"
        });
 
-    const __recaptcha_site_key = "6LcP6UYsAAAAAFkX23OtzZzOumCBRnUZhg_RYGCE";
+       // reCAPTCHA v3 Site Key (for Firebase App Check)
+       // Get from: https://www.google.com/recaptcha/admin
+       // Create a v3 site key and add your domain(s)
+       const __recaptcha_site_key = "YOUR_RECAPTCHA_V3_SITE_KEY";
     </script>
     <!-- Starfield background -->
     <div class="starfield" id="starfield"></div>
@@ -557,10 +566,22 @@
         // Configuration Variables
         // ============================================================================
         
-        // Client-side API key - used as fallback when proxy is not configured
-        // This key is kept for backward compatibility and development convenience
-        // For production, use the Firebase proxy to keep the key server-side
-        const apiKey = "AIzaSyAn9y0jXqRvoc4jfLUco2cSsQNoN27M7T8";
+        // Google Generative Language API Key
+        // 
+        // SECURITY WARNING: Hardcoding API keys in client-side code exposes them to anyone
+        // who views your source code. This can lead to unauthorized usage and billing charges.
+        // 
+        // RECOMMENDED APPROACH: Use the Firebase Cloud Function proxy (see server/README.md)
+        // The proxy keeps your API key secure on the server side.
+        // 
+        // If you must use a direct API key for development/testing:
+        // 1. Get an API key from: https://aistudio.google.com/app/apikey
+        // 2. Add restrictions in Google Cloud Console (API keys page)
+        // 3. NEVER commit the key to a public repository
+        // 4. Use environment variables or a config file that's in .gitignore
+        // 
+        // For production: Set up the Firebase proxy and leave this empty
+        const apiKey = "";
         
         // Firebase Proxy Configuration (Optional)
         // Set these variables to enable secure server-side API key usage:

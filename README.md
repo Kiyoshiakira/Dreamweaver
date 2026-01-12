@@ -89,23 +89,20 @@ Dreamweaver is a single-page web application that combines multiple AI technolog
    cd Dreamweaver
    ```
 
-2. **Configure API Keys**:
+2. **Configure API Keys** (⚠️ IMPORTANT - Security First!):
    
-   **Option A: Quick Start (Client-side API key)**
+   **⚠️ SECURITY WARNING**: Never commit API keys to version control!
    
-   Open `dreamweaver.html` and update the following:
-   ```javascript
-   const apiKey = "YOUR_GOOGLE_GEMINI_API_KEY";
-   const SPOTIFY_CLIENT_ID = "YOUR_SPOTIFY_CLIENT_ID"; // Optional
-   ```
+   **Option A: Firebase Proxy Setup (Recommended for ALL deployments)**
    
-   **Option B: Secure Setup (Firebase Proxy - Recommended for Production)**
+   This method keeps your API key secure on the server side:
    
-   For a more secure setup that keeps your API key on the server:
    1. Follow the [Firebase Proxy Setup Guide](server/README.md)
-   2. Configure Firebase Cloud Functions with your API key
-   3. Set up Firebase App Check with reCAPTCHA v3
-   4. Update configuration in `dreamweaver.html`:
+   2. Configure Firebase Cloud Functions with your API key:
+      ```bash
+      firebase functions:config:set genai.key="YOUR_GOOGLE_GEMINI_API_KEY"
+      ```
+   3. Update Firebase config in `public/index.html` (lines 226-248):
       ```javascript
       const __firebase_config = JSON.stringify({
           apiKey: "YOUR_FIREBASE_API_KEY",
@@ -115,19 +112,56 @@ Dreamweaver is a single-page web application that combines multiple AI technolog
       });
       const __recaptcha_site_key = "YOUR_RECAPTCHA_V3_SITE_KEY";
       ```
+   4. Deploy: `firebase deploy --only functions`
    
-   The app will automatically use the proxy when configured, and fall back to direct API calls if not.
+   **Option B: Local Development Only (NOT for production)**
+   
+   For quick local testing only (NOT recommended for production or public deployment):
+   
+   1. Copy the configuration template:
+      ```bash
+      cp config.example.js config.local.js
+      ```
+   2. Edit `config.local.js` and add your API keys
+   3. The file is already in `.gitignore` so it won't be committed
+   4. Reference it in `public/index.html` or manually update line 575:
+      ```javascript
+      const apiKey = "YOUR_API_KEY"; // Only for local development!
+      ```
+   5. **NEVER** deploy with hardcoded keys!
+   
+   **Option C: Environment-specific Configuration**
+   
+   For advanced users who want to maintain separate configs:
+   
+   1. Create a local config file: `cp config.example.js config.local.js`
+   2. Add your keys to `config.local.js`
+   3. Include it before the main script in `index.html`:
+      ```html
+      <script src="config.local.js"></script>
+      <script>
+        // Use the config variables defined in config.local.js
+        const apiKey = genAIApiKey || "";
+        // ... rest of your code
+      </script>
+      ```
+   4. For production, use Option A (Firebase Proxy)
+   
+   The app will automatically use the Firebase proxy when configured, and fall back to direct API calls if not.
 
 3. **Set up Spotify Integration (Optional)**:
    - Go to [Spotify Developer Dashboard](https://developer.spotify.com/dashboard)
    - Create a new app
-   - Add your app's redirect URI (e.g., `http://localhost:8000/dreamweaver.html`)
-   - Copy the Client ID and paste it into `SPOTIFY_CLIENT_ID` in `dreamweaver.html`
+   - Add your app's redirect URI (e.g., `http://localhost:8000/public/index.html`)
+   - Copy the Client ID and update line 96 in `public/index.html`:
+     ```javascript
+     const SPOTIFY_CLIENT_ID = "YOUR_SPOTIFY_CLIENT_ID";
+     ```
    - Note: Spotify integration requires HTTPS in production environments
    - **Important**: The Spotify Web Playback SDK requires `'unsafe-eval'` in the Content Security Policy. The HTML file includes a CSP meta tag with this directive. If you're hosting on a platform that sets server-side CSP headers, ensure those headers also include `'unsafe-eval'` in the `script-src` directive.
 
 4. **Run the Application**:
-   **⚠️ Important**: It is strongly recommended to serve the application using a local HTTP server rather than opening the HTML file directly (`file://`). This prevents issues with:
+   **⚠️ Important**: Always serve the application using a local HTTP server rather than opening the HTML file directly (`file://`). This prevents issues with:
    - Cross-origin requests for SDK scripts (Spotify, YouTube)
    - IFrame postMessage restrictions
    - OAuth redirect URIs
@@ -136,14 +170,16 @@ Dreamweaver is a single-page web application that combines multiple AI technolog
    Serve using one of these methods:
    ```bash
    # Using Python
+   cd public
    python -m http.server 8000
    
    # Using Node.js
-   npx http-server
+   cd public
+   npx http-server -p 8000
    ```
 
 5. **Access the App**:
-   Navigate to `http://localhost:8000/dreamweaver.html` in your web browser
+   Navigate to `http://localhost:8000/index.html` in your web browser
 
 ---
 
