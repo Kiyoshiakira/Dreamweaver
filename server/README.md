@@ -1,6 +1,6 @@
 # Firebase Functions Setup and Deployment Guide
 
-This directory contains Firebase Cloud Functions that provide a secure proxy for the Google Generative Language API. The proxy keeps your API key on the server side and verifies requests using Firebase App Check.
+This directory contains Firebase Cloud Functions that provide secure proxies for the Google Generative Language API. The proxies keep your API key on the server side and verify requests using Firebase App Check.
 
 ## Quick Start (For Experienced Users)
 
@@ -23,17 +23,31 @@ firebase deploy --only functions
 firebase emulators:start --only functions
 ```
 
-**That's it!** The function will automatically find your API key. If you get "API key not configured" errors, see the [Troubleshooting](#troubleshooting) section below.
+**That's it!** The functions will automatically find your API key. If you get "API key not configured" errors, see the [Troubleshooting](#troubleshooting) section below.
 
 ---
 
 ## Overview
 
-The `generateStory` function:
-- Accepts story generation requests from the client
-- Verifies App Check tokens to prevent unauthorized access
-- Forwards requests to Google's Generative Language API using a server-side key
-- Returns sanitized responses to the client
+This project includes three Cloud Functions that act as secure proxies:
+
+1. **`generateStory`** - Proxies story generation requests
+   - Accepts story prompts and system instructions
+   - Returns generated story content in JSON format
+
+2. **`generateTTS`** - Proxies text-to-speech requests
+   - Accepts text, voice name, and accent parameters
+   - Returns audio data in base64 format
+
+3. **`generateImage`** - Proxies image generation requests
+   - Accepts image description prompts
+   - Returns generated images in base64 format
+
+All functions:
+- Verify App Check tokens to prevent unauthorized access
+- Forward requests to Google's Generative Language API using a server-side key
+- Return sanitized responses to the client
+- Are accessible via Firebase Hosting rewrites at `/generateStory`, `/generateTTS`, and `/generateImage`
 
 ## Prerequisites
 
