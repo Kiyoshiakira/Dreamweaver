@@ -66,7 +66,7 @@
                     firebaseConfig.projectId === 'your-project-id') {
                     console.error('⚠️ Firebase configuration not updated. Please configure Firebase.');
                     firebaseInitError = 'Firebase Configuration Required: Dreamweaver requires Firebase Cloud Functions to work. ' +
-                        'Please update the Firebase configuration in index.html (lines 233-241) with your project details. ' +
+                        'Please update the Firebase configuration (__firebase_config variable in the <script> tag) with your project details. ' +
                         'See server/README.md for setup instructions.';
                 } else {
                     const app = initializeApp(firebaseConfig);
@@ -78,7 +78,7 @@
                         // Check if reCAPTCHA key has been updated from default
                         if (__recaptcha_site_key === 'YOUR_RECAPTCHA_V3_SITE_KEY') {
                             console.error('⚠️ reCAPTCHA site key not updated. Please configure App Check.');
-                            firebaseInitError = 'App Check Configuration Required: Please update the reCAPTCHA site key in index.html (line 259). ' +
+                            firebaseInitError = 'App Check Configuration Required: Please update the reCAPTCHA site key (__recaptcha_site_key variable in the <script> tag). ' +
                                 'Get a key from https://www.google.com/recaptcha/admin';
                         } else {
                             try {
@@ -96,7 +96,7 @@
                     } else {
                         console.error('⚠️ reCAPTCHA site key not provided');
                         firebaseInitError = 'App Check Not Configured: reCAPTCHA v3 site key is required. ' +
-                            'Please set __recaptcha_site_key variable in index.html (line 259).';
+                            'Please set __recaptcha_site_key variable in the <script> tag.';
                     }
                 }
             } else {
