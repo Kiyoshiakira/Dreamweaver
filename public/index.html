@@ -584,20 +584,20 @@
         
         // Google Generative Language API Key
         // 
-        // SECURITY WARNING: Hardcoding API keys in client-side code exposes them to anyone
-        // who views your source code. This can lead to unauthorized usage and billing charges.
+        // REMOVED: Direct API key usage is no longer supported
+        // All API calls must go through Firebase Cloud Functions for security
         // 
-        // RECOMMENDED APPROACH: Use the Firebase Cloud Function proxy (see server/README.md)
-        // The proxy keeps your API key secure on the server side.
+        // To configure the API key:
+        // 1. Set the key in Firebase Functions config:
+        //    firebase functions:config:set genai.key="YOUR_API_KEY"
+        // 2. Deploy the functions:
+        //    firebase deploy --only functions
+        // 3. Ensure Firebase configuration is set below
         // 
-        // If you must use a direct API key for development/testing:
-        // 1. Get an API key from: https://aistudio.google.com/app/apikey
-        // 2. Add restrictions in Google Cloud Console (API keys page)
-        // 3. NEVER commit the key to a public repository
-        // 4. Use environment variables or a config file that's in .gitignore
-        // 
-        // For production: Set up the Firebase proxy and leave this empty
-        const apiKey = "";
+        // The app will automatically route all API calls through secure Firebase proxies:
+        // - Story generation: /generateStory
+        // - Text-to-speech: /generateTTS
+        // - Image generation: /generateImage
         
         // Firebase Proxy Configuration (Optional)
         // Set these variables to enable secure server-side API key usage:
@@ -671,11 +671,9 @@
                 const appCheckTokenResponse = await getToken(window.fb.appCheck, /* forceRefresh */ false);
                 const appCheckToken = appCheckTokenResponse.token;
                 
-                console.log('Calling proxy endpoint with App Check token');
+                console.log('Calling generateStory proxy endpoint with App Check token');
                 
                 // Determine proxy URL
-                // If using Firebase Hosting with rewrites, use relative path
-                // Otherwise, use the full Cloud Function URL
                 const proxyUrl = typeof __proxy_url !== 'undefined' && __proxy_url 
                     ? __proxy_url 
                     : '/generateStory';
@@ -709,7 +707,7 @@
                 }
                 
                 const data = await response.json();
-                console.log('Successfully received response from proxy');
+                console.log('Successfully received response from generateStory proxy');
                 return data;
                 
             } catch (error) {
@@ -718,6 +716,120 @@
                     throw error;
                 }
                 throw new Error(`PROXY_REQUEST_FAILED: ${error.message}`);
+            }
+        }
+        
+        /**
+         * Helper function to call the Firebase proxy for TTS
+         * 
+         * @param {string} text - The text to convert to speech
+         * @param {string} voice - Voice name
+         * @param {string} accent - Accent to use
+         * @returns {Promise<Object>} - API response data
+         * @throws {Error} - If proxy is not configured or request fails
+         */
+        async function callTTSProxy(text, voice, accent) {
+            // Check if Firebase App Check is initialized
+            if (!window.fb || !window.fb.appCheck) {
+                throw new Error('PROXY_NOT_CONFIGURED');
+            }
+            
+            try {
+                // Import getToken from App Check
+                const { getToken } = await import("https://www.gstatic.com/firebasejs/11.6.1/firebase-app-check.js");
+                
+                // Get App Check token
+                const appCheckTokenResponse = await getToken(window.fb.appCheck, /* forceRefresh */ false);
+                const appCheckToken = appCheckTokenResponse.token;
+                
+                console.log('Calling generateTTS proxy endpoint with App Check token');
+                
+                // Determine proxy URL
+                const proxyUrl = '/generateTTS';
+                
+                // POST to proxy endpoint
+                const response = await fetch(proxyUrl, {
+                    method: 'POST',
+                    headers: {
+                        'Content-Type': 'application/json',
+                        'X-Firebase-AppCheck': appCheckToken
+                    },
+                    body: JSON.stringify({
+                        text: text,
+                        voice: voice,
+                        accent: accent
+                    })
+                });
+                
+                if (!response.ok) {
+                    const errorData = await response.json().catch(() => ({ error: 'Unknown error' }));
+                    throw new Error(`TTS_PROXY_ERROR: ${errorData.details || errorData.error || `HTTP ${response.status}`}`);
+                }
+                
+                const data = await response.json();
+                console.log('Successfully received response from generateTTS proxy');
+                return data;
+                
+            } catch (error) {
+                if (error.message && error.message.startsWith('TTS_PROXY_')) {
+                    throw error;
+                }
+                throw new Error(`TTS_PROXY_REQUEST_FAILED: ${error.message}`);
+            }
+        }
+        
+        /**
+         * Helper function to call the Firebase proxy for image generation
+         * 
+         * @param {string} prompt - The image generation prompt
+         * @returns {Promise<Object>} - API response data
+         * @throws {Error} - If proxy is not configured or request fails
+         */
+        async function callImageProxy(prompt) {
+            // Check if Firebase App Check is initialized
+            if (!window.fb || !window.fb.appCheck) {
+                throw new Error('PROXY_NOT_CONFIGURED');
+            }
+            
+            try {
+                // Import getToken from App Check
+                const { getToken } = await import("https://www.gstatic.com/firebasejs/11.6.1/firebase-app-check.js");
+                
+                // Get App Check token
+                const appCheckTokenResponse = await getToken(window.fb.appCheck, /* forceRefresh */ false);
+                const appCheckToken = appCheckTokenResponse.token;
+                
+                console.log('Calling generateImage proxy endpoint with App Check token');
+                
+                // Determine proxy URL
+                const proxyUrl = '/generateImage';
+                
+                // POST to proxy endpoint
+                const response = await fetch(proxyUrl, {
+                    method: 'POST',
+                    headers: {
+                        'Content-Type': 'application/json',
+                        'X-Firebase-AppCheck': appCheckToken
+                    },
+                    body: JSON.stringify({
+                        prompt: prompt
+                    })
+                });
+                
+                if (!response.ok) {
+                    const errorData = await response.json().catch(() => ({ error: 'Unknown error' }));
+                    throw new Error(`IMAGE_PROXY_ERROR: ${errorData.details || errorData.error || `HTTP ${response.status}`}`);
+                }
+                
+                const data = await response.json();
+                console.log('Successfully received response from generateImage proxy');
+                return data;
+                
+            } catch (error) {
+                if (error.message && error.message.startsWith('IMAGE_PROXY_')) {
+                    throw error;
+                }
+                throw new Error(`IMAGE_PROXY_REQUEST_FAILED: ${error.message}`);
             }
         }
         
@@ -1430,60 +1542,17 @@
 
             const promptText = `History: ${state.history.join(' ')}\n\nCurrent Focus: ${seedPrompt}`;
             
-            // Determine whether to use proxy or direct API call
-            // Use proxy if PROXY_GENERATE is not explicitly set to false and App Check is available
-            const useProxy = typeof PROXY_GENERATE === 'undefined' ? true : PROXY_GENERATE;
-            let data = null;
-            let usedProxy = false;
-            
             try {
-                // Try proxy first if available and not disabled
-                if (useProxy && window.fb && window.fb.appCheck) {
-                    try {
-                        console.log('Attempting to use Firebase proxy for story generation');
-                        data = await callGenerateProxy(promptText, sys);
-                        usedProxy = true;
-                        console.log('✓ Successfully used Firebase proxy');
-                    } catch (proxyError) {
-                        console.warn('Proxy request failed, falling back to direct API:', proxyError.message);
-                        
-                        // Show informative banner based on error type
-                        if (proxyError.message.includes('PROXY_NOT_CONFIGURED')) {
-                            console.log('ℹ️ Proxy not configured - using direct API call');
-                        } else if (proxyError.message.includes('PROXY_AUTH_FAILED')) {
-                            showTransientBanner('App Check verification failed. Using direct API as fallback. Check your reCAPTCHA configuration.', 'warning');
-                        } else if (proxyError.message.includes('PROXY_UPSTREAM_ERROR')) {
-                            showTransientBanner('Proxy upstream error. Using direct API as fallback. Check server-side API key configuration.', 'warning');
-                        } else if (proxyError.message.includes('PROXY_SERVER_ERROR')) {
-                            showTransientBanner('Proxy server error. Using direct API as fallback.', 'warning');
-                        }
-                        
-                        // Fall through to direct API call
-                        data = null;
-                    }
+                // Always use Firebase proxy for story generation
+                if (!window.fb || !window.fb.appCheck) {
+                    throw new Error('Firebase configuration is required. Please configure Firebase and App Check to use Dreamweaver.');
                 }
                 
-                // Fallback to direct API call if proxy not used or failed
-                if (!data) {
-                    console.log('Using direct API call to Generative Language API');
-                    const res = await fetch(`https://generativelanguage.googleapis.com/v1beta/models/gemini-3-flash-preview:generateContent?key=${apiKey}`, {
-                        method: 'POST',
-                        headers: { 'Content-Type': 'application/json' },
-                        body: JSON.stringify({
-                            contents: [{ parts: [{ text: promptText }] }],
-                            systemInstruction: { parts: [{ text: sys }] },
-                            generationConfig: { responseMimeType: "application/json" }
-                        })
-                    });
-                    
-                    if (!res.ok) {
-                        throw new Error(`API request failed: ${res.status} ${res.statusText}`);
-                    }
-                    
-                    data = await res.json();
-                }
+                console.log('Using Firebase proxy for story generation');
+                const data = await callGenerateProxy(promptText, sys);
+                console.log('✓ Successfully used Firebase proxy');
                 
-                // Validate response structure (same for both proxy and direct API)
+                // Validate response structure
                 validateStoryResponse(data);
                 
                 const result = JSON.parse(data.candidates[0].content.parts[0].text);
@@ -1501,7 +1570,21 @@
                 await preGenerateChapterImages(result);
             } catch (err) {
                 console.error('Error generating chapter:', err);
-                // Re-throw error to propagate to caller (initiateSession or generateNextChapter)
+                
+                // Show informative error banner
+                if (err.message.includes('PROXY_NOT_CONFIGURED') || err.message.includes('Firebase configuration is required')) {
+                    showTransientBanner('⚠️ Story Generation Failed: Firebase not configured. Please set up Firebase and deploy Cloud Functions to enable story generation. See server/README.md for setup instructions.', 'error');
+                } else if (err.message.includes('PROXY_AUTH_FAILED') || err.message.includes('APP_CHECK')) {
+                    showTransientBanner('⚠️ Story Generation Failed: App Check verification failed. Please configure reCAPTCHA v3 site key and ensure Firebase App Check is properly initialized.', 'error');
+                } else if (err.message.includes('PROXY_UPSTREAM_ERROR')) {
+                    showTransientBanner('⚠️ Story Generation Failed: API key issue. Please ensure your API key is configured in Firebase Functions: firebase functions:config:set genai.key="YOUR_KEY"', 'error');
+                } else if (err.message.includes('PROXY_SERVER_ERROR')) {
+                    showTransientBanner('⚠️ Story Generation Failed: Server error. Check Firebase Functions logs for details.', 'error');
+                } else {
+                    showTransientBanner(`⚠️ Story Generation Failed: ${err.message}`, 'error');
+                }
+                
+                // Re-throw error to propagate to caller
                 throw err;
             } finally {
                 state.isGeneratingChapter = false;
@@ -1638,29 +1721,31 @@
         }
 
         async function fetchTTS(text) {
-            const accentPrompt = state.accent !== DEFAULT_ACCENT ? ` Speak with a ${state.accent} accent.` : '';
-            const fullText = text + accentPrompt;
-            
-            const res = await fetch(`https://generativelanguage.googleapis.com/v1beta/models/gemini-2.5-flash-preview-tts:generateContent?key=${apiKey}`, {
-                method: 'POST',
-                headers: { 'Content-Type': 'application/json' },
-                body: JSON.stringify({
-                    contents: [{ parts: [{ text: fullText }] }],
-                    generationConfig: { 
-                        responseModalities: ["AUDIO"], 
-                        speechConfig: { voiceConfig: { prebuiltVoiceConfig: { voiceName: state.voice } } } 
-                    }
-                })
-            });
-            
-            if (!res.ok) {
-                throw new Error(`TTS API request failed: ${res.status} ${res.statusText}`);
+            try {
+                // Always use Firebase proxy for TTS
+                if (!window.fb || !window.fb.appCheck) {
+                    throw new Error('Firebase configuration is required for text-to-speech');
+                }
+                
+                console.log('Using Firebase proxy for TTS');
+                const data = await callTTSProxy(text, state.voice, state.accent);
+                
+                // Validate response structure
+                validateTTSResponse(data);
+                
+                return base64ToWav(data.candidates[0].content.parts[0].inlineData.data, 24000);
+            } catch (error) {
+                console.error('TTS generation failed:', error);
+                
+                // Show error banner
+                if (error.message.includes('PROXY_NOT_CONFIGURED') || error.message.includes('Firebase configuration is required')) {
+                    showTransientBanner('⚠️ Text-to-Speech Failed: Firebase not configured. Please set up Firebase Cloud Functions.', 'error');
+                } else {
+                    showTransientBanner(`⚠️ Text-to-Speech Failed: ${error.message}`, 'error');
+                }
+                
+                throw error;
             }
-            
-            const data = await res.json();
-            validateTTSResponse(data); // Validate response structure
-            
-            return base64ToWav(data.candidates[0].content.parts[0].inlineData.data, 24000);
         }
 
         function base64ToWav(base64, rate) {
@@ -1684,25 +1769,16 @@
             document.getElementById('img-overlay').classList.remove('opacity-0');
             const context = state.sentences.slice(idx, idx+2).join(' ');
             try {
-                const res = await fetch(`https://generativelanguage.googleapis.com/v1beta/models/gemini-2.5-flash-image:generateContent?key=${apiKey}`, {
-                    method: 'POST',
-                    headers: { 'Content-Type': 'application/json' },
-                    body: JSON.stringify({ 
-                        contents: [{ 
-                            parts: [{ 
-                                text: `Cinematic professional fantasy art, atmospheric, ${state.genre} style: ${context}` 
-                            }] 
-                        }] 
-                    })
-                });
-                
-                if (!res.ok) {
-                    throw new Error(`Image API request failed: ${res.status} ${res.statusText}`);
+                // Always use Firebase proxy for image generation
+                if (!window.fb || !window.fb.appCheck) {
+                    throw new Error('Firebase configuration is required for image generation');
                 }
                 
-                const data = await res.json();
+                const prompt = `Cinematic professional fantasy art, atmospheric, ${state.genre} style: ${context}`;
+                console.log('Using Firebase proxy for image generation');
+                const data = await callImageProxy(prompt);
                 
-                // Validate response structure before accessing nested properties
+                // Validate response structure
                 if (!data || !data.candidates || !data.candidates[0] || 
                     !data.candidates[0].content || !data.candidates[0].content.parts || 
                     !data.candidates[0].content.parts[0] || !data.candidates[0].content.parts[0].inlineData) {
@@ -1717,6 +1793,12 @@
                 };
             } catch (err) {
                 console.error('Visual generation error:', err);
+                
+                // Show error banner only for non-config errors (config errors shown once during init)
+                if (!err.message.includes('Firebase configuration is required')) {
+                    showTransientBanner(`⚠️ Image Generation Failed: ${err.message}`, 'warning');
+                }
+                
                 // Hide overlay on error to avoid blocking the UI
                 document.getElementById('img-overlay').classList.add('opacity-0');
             } finally { 
@@ -1929,25 +2011,15 @@
             if (state.imageCache.has(sentenceIdx)) return;
             
             try {
-                const res = await fetch(`https://generativelanguage.googleapis.com/v1beta/models/gemini-2.5-flash-image:generateContent?key=${apiKey}`, {
-                    method: 'POST',
-                    headers: { 'Content-Type': 'application/json' },
-                    body: JSON.stringify({ 
-                        contents: [{ 
-                            parts: [{ 
-                                text: `Cinematic professional fantasy art, atmospheric, ${state.genre} style: ${promptText}` 
-                            }] 
-                        }] 
-                    })
-                });
-                
-                if (!res.ok) {
-                    throw new Error(`Image API request failed: ${res.status} ${res.statusText}`);
+                // Always use Firebase proxy for image generation
+                if (!window.fb || !window.fb.appCheck) {
+                    throw new Error('Firebase configuration is required for image generation');
                 }
                 
-                const data = await res.json();
+                const prompt = `Cinematic professional fantasy art, atmospheric, ${state.genre} style: ${promptText}`;
+                const data = await callImageProxy(prompt);
                 
-                // Validate response structure before accessing nested properties
+                // Validate response structure
                 if (!data || !data.candidates || !data.candidates[0] || 
                     !data.candidates[0].content || !data.candidates[0].content.parts || 
                     !data.candidates[0].content.parts[0] || !data.candidates[0].content.parts[0].inlineData) {

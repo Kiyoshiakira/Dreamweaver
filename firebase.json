@@ -5,6 +5,20 @@
       "firebase.json",
       "**/.*",
       "**/node_modules/**"
+    ],
+    "rewrites": [
+      {
+        "source": "/generateStory",
+        "function": "generateStory"
+      },
+      {
+        "source": "/generateTTS",
+        "function": "generateTTS"
+      },
+      {
+        "source": "/generateImage",
+        "function": "generateImage"
+      }
     ]
   },
   "firestore": {
