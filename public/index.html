@@ -50,45 +50,67 @@
         import { getFirestore, collection, doc, addDoc, getDocs, query, where, onSnapshot, deleteDoc, updateDoc } from "https://www.gstatic.com/firebasejs/11.6.1/firebase-firestore.js";
         import { initializeAppCheck, ReCaptchaV3Provider } from "https://www.gstatic.com/firebasejs/11.6.1/firebase-app-check.js";
 
-        // Firebase configuration - optional, only initialize if config is provided
+        // Firebase configuration - REQUIRED for Dreamweaver to function
         let auth = null;
         let db = null;
         let appCheck = null;
+        let firebaseInitError = null; // Store error to display later
         const appId = typeof __app_id !== 'undefined' ? __app_id : 'narrative-engine-infinite';
         
         try {
             if (typeof __firebase_config !== 'undefined') {
                 const firebaseConfig = JSON.parse(__firebase_config);
-                const app = initializeApp(firebaseConfig);
-                auth = getAuth(app);
-                db = getFirestore(app);
                 
-                // Initialize App Check if reCAPTCHA site key is provided
-                // Get your reCAPTCHA v3 site key from: https://www.google.com/recaptcha/admin
-                // Set it via: const __recaptcha_site_key = "YOUR_SITE_KEY";
-                if (typeof __recaptcha_site_key !== 'undefined' && __recaptcha_site_key) {
-                    try {
-                        appCheck = initializeAppCheck(app, {
-                            provider: new ReCaptchaV3Provider(__recaptcha_site_key),
-                            isTokenAutoRefreshEnabled: true
-                        });
-                        console.log('Firebase App Check initialized successfully');
-                    } catch (appCheckError) {
-                        console.warn('App Check initialization failed:', appCheckError.message);
-                        console.warn('Proxy will not be available. Using direct API calls as fallback.');
-                    }
+                // Check if configuration has been updated from defaults
+                if (firebaseConfig.apiKey === 'YOUR_FIREBASE_API_KEY' || 
+                    firebaseConfig.projectId === 'your-project-id') {
+                    console.error('⚠️ Firebase configuration not updated. Please configure Firebase.');
+                    firebaseInitError = 'Firebase Configuration Required: Dreamweaver requires Firebase Cloud Functions to work. ' +
+                        'Please update the Firebase configuration in index.html (lines 233-241) with your project details. ' +
+                        'See server/README.md for setup instructions.';
                 } else {
-                    console.log('reCAPTCHA site key not provided - App Check disabled');
-                    console.log('To enable proxy: Set __recaptcha_site_key variable with your reCAPTCHA v3 site key');
+                    const app = initializeApp(firebaseConfig);
+                    auth = getAuth(app);
+                    db = getFirestore(app);
+                    
+                    // Initialize App Check if reCAPTCHA site key is provided
+                    if (typeof __recaptcha_site_key !== 'undefined' && __recaptcha_site_key) {
+                        // Check if reCAPTCHA key has been updated from default
+                        if (__recaptcha_site_key === 'YOUR_RECAPTCHA_V3_SITE_KEY') {
+                            console.error('⚠️ reCAPTCHA site key not updated. Please configure App Check.');
+                            firebaseInitError = 'App Check Configuration Required: Please update the reCAPTCHA site key in index.html (line 259). ' +
+                                'Get a key from https://www.google.com/recaptcha/admin';
+                        } else {
+                            try {
+                                appCheck = initializeAppCheck(app, {
+                                    provider: new ReCaptchaV3Provider(__recaptcha_site_key),
+                                    isTokenAutoRefreshEnabled: true
+                                });
+                                console.log('✓ Firebase App Check initialized successfully');
+                            } catch (appCheckError) {
+                                console.error('App Check initialization failed:', appCheckError.message);
+                                firebaseInitError = 'App Check Initialization Failed: ' + appCheckError.message + '. ' +
+                                    'Dreamweaver will not function without App Check. Please verify your reCAPTCHA v3 site key.';
+                            }
+                        }
+                    } else {
+                        console.error('⚠️ reCAPTCHA site key not provided');
+                        firebaseInitError = 'App Check Not Configured: reCAPTCHA v3 site key is required. ' +
+                            'Please set __recaptcha_site_key variable in index.html (line 259).';
+                    }
                 }
             } else {
-                console.log('Firebase configuration not provided - running without Firebase backend');
+                console.error('⚠️ Firebase configuration not provided');
+                firebaseInitError = 'Firebase Not Configured: Dreamweaver requires Firebase Cloud Functions. ' +
+                    'Please configure Firebase in index.html. See server/README.md for instructions.';
             }
         } catch (error) {
-            console.warn('Firebase initialization failed - running without Firebase backend:', error.message);
+            console.error('Firebase initialization failed:', error.message);
+            firebaseInitError = 'Firebase Initialization Failed: ' + error.message + '. ' +
+                'Please check your Firebase configuration in index.html.';
         }
 
-        window.fb = { auth, db, appId, appCheck };
+        window.fb = { auth, db, appId, appCheck, firebaseInitError };
 
         // Spotify Configuration
         // IMPORTANT: Replace SPOTIFY_CLIENT_ID with your actual Spotify Client ID from https://developer.spotify.com/dashboard
@@ -224,12 +246,24 @@
 </head>
 <body class="selection:bg-indigo-500/30">
     <script>
-       // Firebase Configuration
-       // Get your Firebase config from: https://console.firebase.google.com/
-       // Project Settings > General > Your apps > Web app
+       // ========================================================================
+       // REQUIRED: Firebase Configuration
+       // ========================================================================
+       // Dreamweaver requires Firebase Cloud Functions to work. All API calls
+       // (story generation, text-to-speech, image generation) are routed through
+       // secure Firebase Cloud Functions to protect API keys.
+       //
+       // Setup Steps:
+       // 1. Create a Firebase project: https://console.firebase.google.com/
+       // 2. Get your Firebase config from: Project Settings > Your apps > Web app
+       // 3. Replace the values below with your Firebase configuration
+       // 4. Set up Cloud Functions (see server/README.md for instructions):
+       //    - Configure API key: firebase functions:config:set genai.key="YOUR_KEY"
+       //    - Deploy functions: firebase deploy --only functions
+       // 5. Set up Firebase App Check with reCAPTCHA v3 (required for security)
+       //
+       // IMPORTANT: DO NOT commit real API keys to public repositories
        // 
-       // IMPORTANT: Replace the values below with your own Firebase project config
-       // DO NOT commit real API keys to public repositories
        const __firebase_config = JSON.stringify({
             apiKey: "YOUR_FIREBASE_API_KEY",
             authDomain: "your-project.firebaseapp.com",
@@ -240,9 +274,13 @@
             measurementId: "G-XXXXXXXXXX"
        });
 
-       // reCAPTCHA v3 Site Key (for Firebase App Check)
+       // ========================================================================
+       // REQUIRED: reCAPTCHA v3 Site Key (for Firebase App Check)
+       // ========================================================================
        // Get from: https://www.google.com/recaptcha/admin
-       // Create a v3 site key and add your domain(s)
+       // Create a v3 site key and add your domain(s) (including localhost for dev)
+       // App Check protects your Cloud Functions from abuse
+       //
        const __recaptcha_site_key = "YOUR_RECAPTCHA_V3_SITE_KEY";
     </script>
     <!-- Starfield background -->
@@ -582,8 +620,9 @@
         // Configuration Variables
         // ============================================================================
         
-        // Google Generative Language API Key
-        // 
+        // ========================================================================
+        // API Configuration
+        // ========================================================================
         // REMOVED: Direct API key usage is no longer supported
         // All API calls must go through Firebase Cloud Functions for security
         // 
@@ -592,37 +631,14 @@
         //    firebase functions:config:set genai.key="YOUR_API_KEY"
         // 2. Deploy the functions:
         //    firebase deploy --only functions
-        // 3. Ensure Firebase configuration is set below
+        // 3. Ensure Firebase configuration is set in the <script> tag above
         // 
         // The app will automatically route all API calls through secure Firebase proxies:
         // - Story generation: /generateStory
         // - Text-to-speech: /generateTTS
         // - Image generation: /generateImage
-        
-        // Firebase Proxy Configuration (Optional)
-        // Set these variables to enable secure server-side API key usage:
         //
-        // const __firebase_config = JSON.stringify({
-        //     apiKey: "YOUR_FIREBASE_API_KEY",
-        //     authDomain: "your-project.firebaseapp.com",
-        //     projectId: "your-project-id",
-        //     storageBucket: "your-project.appspot.com",
-        //     messagingSenderId: "123456789",
-        //     appId: "1:123456789:web:abc123"
-        // });
-        //
-        // const __recaptcha_site_key = "YOUR_RECAPTCHA_V3_SITE_KEY";
-        //
-        // const __proxy_url = "/generateStory"; // or full URL to your Cloud Function
-        //
-        // const PROXY_GENERATE = true; // Set to false to disable proxy and use direct API
-        //
-        // When configured, the app will:
-        // 1. Initialize Firebase App Check with reCAPTCHA v3
-        // 2. Call the Firebase Function proxy for story generation
-        // 3. Fall back to direct API calls if proxy fails or is not configured
-        //
-        // See server/README.md for deployment instructions
+        // See server/README.md for detailed deployment instructions
         
         const DEFAULT_ACCENT = 'American';
         const MUSIC_SELECTION_MIN_SCORE = 2; // Minimum keyword matches for intelligent music selection
@@ -673,10 +689,8 @@
                 
                 console.log('Calling generateStory proxy endpoint with App Check token');
                 
-                // Determine proxy URL
-                const proxyUrl = typeof __proxy_url !== 'undefined' && __proxy_url 
-                    ? __proxy_url 
-                    : '/generateStory';
+                // Use the Firebase Hosting rewrite path
+                const proxyUrl = '/generateStory';
                 
                 // POST to proxy endpoint
                 const response = await fetch(proxyUrl, {
@@ -2643,6 +2657,11 @@
                         MusicPlayer.loadPlaylist(e.target.value);
                     }
                 });
+            }
+            
+            // Display Firebase initialization error banner if there was an error
+            if (window.fb && window.fb.firebaseInitError) {
+                showTransientBanner('⚠️ ' + window.fb.firebaseInitError, 'error');
             }
         };
     </script>
