@@ -87,7 +87,9 @@ console.log('App Check Token:', token.token);
 2. **Test the generateTTS function with curl:**
 
 ```bash
-curl -X POST https://YOUR_REGION-YOUR_PROJECT_ID.cloudfunctions.net/generateTTS \
+# Replace {YOUR_REGION} and {YOUR_PROJECT_ID} with your actual values
+# Example: us-central1-my-project-id
+curl -X POST https://{YOUR_REGION}-{YOUR_PROJECT_ID}.cloudfunctions.net/generateTTS \
   -H "Content-Type: application/json" \
   -H "X-Firebase-AppCheck: YOUR_APP_CHECK_TOKEN_HERE" \
   -d '{
@@ -102,7 +104,8 @@ Expected: JSON response with base64-encoded audio in `candidates[0].content.part
 3. **Test the generateStory function:**
 
 ```bash
-curl -X POST https://YOUR_REGION-YOUR_PROJECT_ID.cloudfunctions.net/generateStory \
+# Replace {YOUR_REGION} and {YOUR_PROJECT_ID} with your actual values
+curl -X POST https://{YOUR_REGION}-{YOUR_PROJECT_ID}.cloudfunctions.net/generateStory \
   -H "Content-Type: application/json" \
   -H "X-Firebase-AppCheck: YOUR_APP_CHECK_TOKEN_HERE" \
   -d '{
