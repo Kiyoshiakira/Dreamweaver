@@ -18,6 +18,10 @@
       {
         "source": "/generateImage",
         "function": "generateImage"
+      },
+      {
+        "source": "**",
+        "destination": "/index.html"
       }
     ]
   },
