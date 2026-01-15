@@ -41,6 +41,10 @@
         frame-src https://www.google.com https://recaptcha.google.com https://www.google.com/recaptcha/;
     ">
     <title>Dreamweaver Debug & Testing Area</title>
+    
+    <!-- Firebase + App Check initialization module -->
+    <script src="/init-firebase.js" type="module"></script>
+    
     <style>
         * {
             margin: 0;
@@ -488,6 +492,10 @@
                         <label style="text-transform: none; color: #e2e8f0; margin: 0;">Log All Requests</label>
                         <div class="toggle" id="log-toggle" onclick="toggleLogging()"></div>
                     </div>
+                    <div class="toggle-section">
+                        <label style="text-transform: none; color: #e2e8f0; margin: 0;">Show Full Prompts</label>
+                        <div class="toggle" id="show-full-prompt-toggle" onclick="toggleFullPrompts()"></div>
+                    </div>
                     <h3>Recent Requests:</h3>
                     <div id="request-log" class="output" style="max-height: 400px;">
                         No requests logged yet...
@@ -553,31 +561,126 @@
         let verboseMode = true;
         let requestLog = [];
         
-        // Initialize Firebase
+        // Prompt redaction settings
+        let showFullPrompts = false;
+        
+        // Load showFullPrompts preference from localStorage
         try {
-            const firebaseConfig = JSON.parse(__firebase_config);
+            const stored = localStorage.getItem('dreamweaver_debug_show_full_prompts');
+            if (stored !== null) {
+                showFullPrompts = stored === 'true';
+            }
+        } catch (e) {
+            console.warn('Failed to load prompt display preference:', e);
+        }
+        
+        /**
+         * Redact or truncate text for display in debug UI
+         * Replaces internal whitespace, trims, and truncates with a suffix
+         * @param {string} text - Text to redact
+         * @param {number} max - Maximum length before truncation (default 120)
+         * @returns {string} Redacted text
+         */
+        function redactPrompt(text, max = 120) {
+            if (!text) return '';
             
-            if (firebaseConfig.apiKey === 'YOUR_FIREBASE_API_KEY') {
-                showError('Firebase not configured. Please update the configuration in this file.');
-            } else {
-                const app = initializeApp(firebaseConfig);
-                auth = getAuth(app);
-                db = getFirestore(app);
-                
-                if (__recaptcha_site_key && __recaptcha_site_key !== 'YOUR_RECAPTCHA_V3_SITE_KEY') {
-                    appCheck = initializeAppCheck(app, {
-                        provider: new ReCaptchaV3Provider(__recaptcha_site_key),
-                        isTokenAutoRefreshEnabled: true
-                    });
-                    updateConfigStatus('appcheck-status', '✅');
-                    logConsole('App Check initialized', 'success');
+            // If showFullPrompts is enabled, return full text
+            if (showFullPrompts) return text;
+            
+            // Normalize whitespace: replace multiple spaces, newlines, tabs with single space
+            let normalized = text.replace(/\s+/g, ' ').trim();
+            
+            // Truncate if needed
+            if (normalized.length > max) {
+                return normalized.substring(0, max) + ' …(redacted)';
+            }
+            
+            return normalized;
+        }
+        
+        /**
+         * Toggle the showFullPrompts setting
+         */
+        function toggleFullPrompts() {
+            showFullPrompts = !showFullPrompts;
+            
+            // Update toggle UI
+            const toggle = document.getElementById('show-full-prompt-toggle');
+            if (toggle) {
+                if (showFullPrompts) {
+                    toggle.classList.add('active');
+                } else {
+                    toggle.classList.remove('active');
                 }
+            }
+            
+            // Save preference to localStorage
+            try {
+                localStorage.setItem('dreamweaver_debug_show_full_prompts', showFullPrompts.toString());
+            } catch (e) {
+                console.warn('Failed to save prompt display preference:', e);
+            }
+            
+            logConsole('Full prompt display ' + (showFullPrompts ? 'enabled' : 'disabled'), 'info');
+        }
+        
+        // Initialize toggle UI on page load
+        window.addEventListener('DOMContentLoaded', () => {
+            const toggle = document.getElementById('show-full-prompt-toggle');
+            if (toggle && showFullPrompts) {
+                toggle.classList.add('active');
+            }
+        });
+        
+        // Initialize Firebase
+        // NOTE: Firebase initialization now handled by init-firebase.js module
+        // This code checks if the module has already initialized Firebase and uses it
+        try {
+            let firebaseAlreadyInitialized = false;
+            
+            // Check if init-firebase.js already initialized Firebase
+            if (typeof window.fb !== 'undefined' && window.fb.auth && window.fb.db) {
+                auth = window.fb.auth;
+                db = window.fb.db;
+                appCheck = window.fb.appCheck;
+                firebaseAlreadyInitialized = true;
                 
                 updateConfigStatus('firebase-status', '✅');
-                logConsole('Firebase initialized successfully', 'success');
+                logConsole('Using Firebase initialization from init-firebase.js module', 'success');
+                
+                if (appCheck) {
+                    updateConfigStatus('appcheck-status', '✅');
+                    logConsole('App Check available from init-firebase.js', 'success');
+                }
                 
                 // Sign in and check authorization
                 await initializeAuth();
+            } else {
+                // Fallback: initialize Firebase inline if init-firebase.js didn't run
+                const firebaseConfig = JSON.parse(__firebase_config);
+                
+                if (firebaseConfig.apiKey === 'YOUR_FIREBASE_API_KEY') {
+                    showError('Firebase not configured. Please update the configuration in this file.');
+                } else {
+                    const app = initializeApp(firebaseConfig);
+                    auth = getAuth(app);
+                    db = getFirestore(app);
+                    
+                    if (__recaptcha_site_key && __recaptcha_site_key !== 'YOUR_RECAPTCHA_V3_SITE_KEY') {
+                        appCheck = initializeAppCheck(app, {
+                            provider: new ReCaptchaV3Provider(__recaptcha_site_key),
+                            isTokenAutoRefreshEnabled: true
+                        });
+                        updateConfigStatus('appcheck-status', '✅');
+                        logConsole('App Check initialized', 'success');
+                    }
+                    
+                    updateConfigStatus('firebase-status', '✅');
+                    logConsole('Firebase initialized successfully', 'success');
+                    
+                    // Sign in and check authorization
+                    await initializeAuth();
+                }
             }
         } catch (error) {
             showError('Firebase initialization failed: ' + error.message);
@@ -673,16 +776,33 @@
         function logRequest(endpoint, request, response, timing) {
             if (!loggingEnabled) return;
             
+            // Create a copy of request with redacted prompts for display
+            const displayRequest = { ...request };
+            if (displayRequest.prompt) {
+                displayRequest.prompt = redactPrompt(displayRequest.prompt);
+            }
+            if (displayRequest.systemInstruction) {
+                displayRequest.systemInstruction = redactPrompt(displayRequest.systemInstruction);
+            }
+            
             const logEntry = {
                 timestamp: new Date().toISOString(),
                 endpoint,
-                request,
+                request: displayRequest,
                 response,
                 timing,
                 success: !response.error
             };
             
-            requestLog.push(logEntry);
+            // Store the original request in requestLog for export
+            requestLog.push({
+                timestamp: new Date().toISOString(),
+                endpoint,
+                request: showFullPrompts ? request : displayRequest,
+                response,
+                timing,
+                success: !response.error
+            });
             
             const requestLogDiv = document.getElementById('request-log');
             const entry = document.createElement('div');
@@ -708,7 +828,7 @@
             
             output.textContent = 'Generating story...';
             output.className = 'output';
-            logConsole('Starting story generation test', 'info');
+            logConsole('Starting story generation test with prompt: ' + redactPrompt(prompt, 60), 'info');
             
             const startTime = performance.now();
             
@@ -758,7 +878,7 @@
             output.textContent = 'Generating speech...';
             output.className = 'output';
             audioPlayer.classList.add('hidden');
-            logConsole('Starting TTS test', 'info');
+            logConsole('Starting TTS test with text: ' + redactPrompt(text, 60), 'info');
             
             const startTime = performance.now();
             
@@ -871,6 +991,8 @@
             document.getElementById('log-toggle').classList.toggle('active');
             logConsole('Request logging ' + (loggingEnabled ? 'enabled' : 'disabled'), 'info');
         };
+        
+        window.toggleFullPrompts = toggleFullPrompts;
         
         window.toggleVerbose = function() {
             verboseMode = !verboseMode;
