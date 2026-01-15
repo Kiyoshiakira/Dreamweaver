@@ -101,29 +101,22 @@
                         const hasRecaptchaPlaceholder = (__recaptcha_site_key === 'YOUR_RECAPTCHA_V3_SITE_KEY');
                         const hasInvalidRecaptcha = (!__recaptcha_site_key || __recaptcha_site_key.trim() === '');
                         
-                        if (typeof __recaptcha_site_key !== 'undefined' && __recaptcha_site_key && !hasInvalidRecaptcha) {
-                            // Check if reCAPTCHA key has been updated from default
-                            if (hasRecaptchaPlaceholder) {
-                                console.error('⚠️ reCAPTCHA site key not updated. Please configure App Check.');
-                                firebaseInitError = 'App Check Configuration Missing: Please update __recaptcha_site_key in public/index.html. ' +
-                                    'Get your reCAPTCHA v3 site key from: https://www.google.com/recaptcha/admin';
-                            } else {
-                                try {
-                                    appCheck = initializeAppCheck(app, {
-                                        provider: new ReCaptchaV3Provider(__recaptcha_site_key),
-                                        isTokenAutoRefreshEnabled: true
-                                    });
-                                    console.log('✓ Firebase App Check initialized successfully');
-                                } catch (appCheckError) {
-                                    console.error('App Check initialization failed:', appCheckError.message);
-                                    firebaseInitError = 'App Check Initialization Failed: ' + appCheckError.message + '. ' +
-                                        'Dreamweaver will not function without App Check. Please verify your reCAPTCHA v3 site key.';
-                                }
-                            }
-                        } else {
-                            console.error('⚠️ reCAPTCHA site key not provided');
+                        if (hasInvalidRecaptcha || hasRecaptchaPlaceholder) {
+                            console.error('⚠️ reCAPTCHA site key not provided or invalid.');
                             firebaseInitError = 'App Check Configuration Missing: Please update __recaptcha_site_key in public/index.html. ' +
                                 'Get your reCAPTCHA v3 site key from: https://www.google.com/recaptcha/admin';
+                        } else {
+                            try {
+                                appCheck = initializeAppCheck(app, {
+                                    provider: new ReCaptchaV3Provider(__recaptcha_site_key),
+                                    isTokenAutoRefreshEnabled: true
+                                });
+                                console.log('✓ Firebase App Check initialized successfully');
+                            } catch (appCheckError) {
+                                console.error('App Check initialization failed:', appCheckError.message);
+                                firebaseInitError = 'App Check Initialization Failed: ' + appCheckError.message + '. ' +
+                                    'Dreamweaver will not function without App Check. Please verify your reCAPTCHA v3 site key.';
+                            }
                         }
                     }
                 } else {

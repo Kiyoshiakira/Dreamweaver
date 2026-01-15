@@ -680,13 +680,16 @@
                     const hasRecaptchaPlaceholder = (__recaptcha_site_key === 'YOUR_RECAPTCHA_V3_SITE_KEY');
                     const hasInvalidRecaptcha = (!__recaptcha_site_key || __recaptcha_site_key.trim() === '');
                     
-                    if (__recaptcha_site_key && !hasInvalidRecaptcha && !hasRecaptchaPlaceholder) {
+                    if (!hasInvalidRecaptcha && !hasRecaptchaPlaceholder) {
                         appCheck = initializeAppCheck(app, {
                             provider: new ReCaptchaV3Provider(__recaptcha_site_key),
                             isTokenAutoRefreshEnabled: true
                         });
                         updateConfigStatus('appcheck-status', '✅');
                         logConsole('App Check initialized', 'success');
+                    } else {
+                        updateConfigStatus('appcheck-status', '⚠️');
+                        logConsole('App Check not configured (reCAPTCHA key missing or invalid)', 'warning');
                     }
                     
                     updateConfigStatus('firebase-status', '✅');
