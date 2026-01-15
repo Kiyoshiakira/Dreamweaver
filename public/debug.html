@@ -1,4 +1,23 @@
 <!DOCTYPE html>
+<!--
+    Dreamweaver Debug & Testing Area
+    
+    ⚠️ IMPORTANT SECURITY NOTICE FOR PRODUCTION DEPLOYMENT:
+    
+    This debug interface is configured for development/demo purposes.
+    Before deploying to production, you MUST:
+    
+    1. Update Firebase configuration (lines 512-521) with your actual values
+    2. Update reCAPTCHA site key (line 528) with your actual key
+    3. REMOVE demo access grants that bypass role checking:
+       - Line 613-616: Remove grantAccess() call in else block
+       - Line 619-621: Remove grantAccess() call in catch block
+    4. Deploy Firestore rules with proper role-based access control
+    5. Set up user roles in Firestore for authorized users
+    
+    Failure to do so will allow unauthorized access to debug features.
+    See DEBUG_SETUP.md for detailed production setup instructions.
+-->
 <html lang="en">
 <head>
     <meta charset="UTF-8">
@@ -509,7 +528,10 @@
         import { getFirestore, doc, getDoc } from "https://www.gstatic.com/firebasejs/11.6.1/firebase-firestore.js";
         import { initializeAppCheck, ReCaptchaV3Provider } from "https://www.gstatic.com/firebasejs/11.6.1/firebase-app-check.js";
         
-        // Configuration - must match main app
+        // CONFIGURATION - Must match main app configuration
+        // TODO: Replace these placeholder values with your actual Firebase configuration
+        // Get your config from: Firebase Console > Project Settings > Your apps
+        // For production deployment, consider using environment variables or server-side config
         const __firebase_config = JSON.stringify({
             apiKey: "YOUR_FIREBASE_API_KEY",
             authDomain: "your-project.firebaseapp.com",
@@ -520,6 +542,8 @@
             measurementId: "YOUR_MEASUREMENT_ID"
         });
         
+        // TODO: Replace with your actual reCAPTCHA v3 site key
+        // Get from: https://www.google.com/recaptcha/admin
         const __recaptcha_site_key = "YOUR_RECAPTCHA_V3_SITE_KEY";
         
         let auth = null;
@@ -599,18 +623,22 @@
                 
                 updateConfigStatus('user-role', userRole);
                 
-                // For development, allow access if Firebase is configured
-                // In production, you should implement proper role checking
+                // Check user role and grant access if authorized
                 if (userRole === 'developer' || userRole === 'tester' || userRole === 'admin') {
                     grantAccess();
                 } else {
-                    // For demo purposes, allow access if configured
-                    logConsole('Note: In production, implement proper role checking in Firestore', 'info');
-                    grantAccess(); // Remove this line in production
+                    // DEVELOPMENT ONLY: Remove this block in production!
+                    // This grants access for demo/testing purposes when Firebase is configured
+                    // In production, only users with proper roles should have access
+                    logConsole('⚠️ DEMO MODE: Granting access without proper role. Remove this in production!', 'info');
+                    grantAccess();
                 }
             } catch (error) {
-                logConsole('Role check error: ' + error.message + ' - Granting access for demo', 'info');
-                grantAccess(); // For demo purposes
+                // DEVELOPMENT ONLY: Remove this block in production!
+                // This grants access even on error for demo/testing purposes
+                // In production, errors should deny access
+                logConsole('Role check error: ' + error.message + ' - Granting access for demo/testing', 'info');
+                grantAccess();
             }
         }
         
