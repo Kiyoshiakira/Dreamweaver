@@ -4,13 +4,13 @@
  * INSTRUCTIONS:
  * 1. Copy this file to a new file (e.g., config.js or config.local.js)
  * 2. Add your file to .gitignore to prevent committing secrets
- * 3. Fill in your actual API keys and configuration
- * 4. Import this config in your index.html or reference the variables
+ * 3. Fill in your actual configuration values
+ * 4. Update the values in index.html (lines 267-284)
  * 
  * SECURITY NOTE:
- * Never commit API keys to version control!
- * For production deployments, use the Firebase Cloud Function proxy
- * to keep keys server-side (see server/README.md)
+ * Never commit API keys or secrets to version control!
+ * The Google Generative Language API key must be configured in Firebase Functions,
+ * NOT in the frontend code. See server/README.md for setup instructions.
  */
 
 // Firebase Configuration
@@ -27,23 +27,23 @@ const firebaseConfig = {
 
 // reCAPTCHA v3 Site Key (for Firebase App Check)
 // Get from: https://www.google.com/recaptcha/admin
+// REQUIRED for security - protects Cloud Functions from abuse
 const recaptchaSiteKey = "YOUR_RECAPTCHA_V3_SITE_KEY";
-
-// Google Generative Language API Key
-// Get from: https://aistudio.google.com/app/apikey
-// 
-// IMPORTANT: Only use this for local development/testing
-// For production, use the Firebase Cloud Function proxy (see server/README.md)
-const genAIApiKey = "YOUR_GOOGLE_GENERATIVE_LANGUAGE_API_KEY";
 
 // Spotify Client ID (optional - for music integration)
 // Get from: https://developer.spotify.com/dashboard
 const spotifyClientId = "YOUR_SPOTIFY_CLIENT_ID";
 
-// Export configuration (if using as a module)
-// Uncomment if using ES6 modules
-// export { firebaseConfig, recaptchaSiteKey, genAIApiKey, spotifyClientId };
+// IMPORTANT: Google Generative Language API Key Configuration
+// ============================================================
+// The API key should NEVER be in frontend code for security reasons.
+// Configure it in Firebase Functions instead:
+//
+//   firebase functions:config:set genai.key="YOUR_API_KEY"
+//   firebase deploy --only functions
+//
+// See server/README.md for detailed setup instructions.
 
 // For inline script usage in HTML:
-// Copy the values above into the appropriate places in index.html
-// Or include this file with <script src="config.js"></script> before the main script
+// Copy the Firebase config and reCAPTCHA key into index.html (lines 267-284)
+// Or include this file with <script src="config.js"></script> before Firebase initialization
