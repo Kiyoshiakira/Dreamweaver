@@ -659,14 +659,29 @@
                 // Fallback: initialize Firebase inline if init-firebase.js didn't run
                 const firebaseConfig = JSON.parse(__firebase_config);
                 
-                if (firebaseConfig.apiKey === 'YOUR_FIREBASE_API_KEY') {
-                    showError('Firebase not configured. Please update the configuration in this file.');
+                const hasPlaceholders = (
+                    firebaseConfig.apiKey === 'YOUR_FIREBASE_API_KEY' ||
+                    firebaseConfig.projectId === 'your-project-id'
+                );
+                
+                const isInvalid = (
+                    !firebaseConfig.apiKey || 
+                    !firebaseConfig.projectId ||
+                    firebaseConfig.apiKey.trim() === '' ||
+                    firebaseConfig.projectId.trim() === ''
+                );
+                
+                if (hasPlaceholders || isInvalid) {
+                    showError('Firebase not configured. Please update __firebase_config in this file with your Firebase project settings.');
                 } else {
                     const app = initializeApp(firebaseConfig);
                     auth = getAuth(app);
                     db = getFirestore(app);
                     
-                    if (__recaptcha_site_key && __recaptcha_site_key !== 'YOUR_RECAPTCHA_V3_SITE_KEY') {
+                    const hasRecaptchaPlaceholder = (__recaptcha_site_key === 'YOUR_RECAPTCHA_V3_SITE_KEY');
+                    const hasInvalidRecaptcha = (!__recaptcha_site_key || __recaptcha_site_key.trim() === '');
+                    
+                    if (__recaptcha_site_key && !hasInvalidRecaptcha && !hasRecaptchaPlaceholder) {
                         appCheck = initializeAppCheck(app, {
                             provider: new ReCaptchaV3Provider(__recaptcha_site_key),
                             isTokenAutoRefreshEnabled: true

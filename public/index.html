@@ -76,23 +76,36 @@
                     const firebaseConfig = JSON.parse(__firebase_config);
                     
                     // Check if configuration has been updated from defaults
-                    if (firebaseConfig.apiKey === 'YOUR_FIREBASE_API_KEY' || 
-                        firebaseConfig.projectId === 'your-project-id') {
-                        console.error('⚠️ Firebase configuration not updated. Please configure Firebase.');
-                        firebaseInitError = 'Firebase Configuration Required: Dreamweaver requires Firebase Cloud Functions to work. ' +
-                            'Please update the Firebase configuration (__firebase_config variable in the <script> tag) with your project details. ' +
-                            'See server/README.md for setup instructions.';
+                    const hasPlaceholders = (
+                        firebaseConfig.apiKey === 'YOUR_FIREBASE_API_KEY' || 
+                        firebaseConfig.projectId === 'your-project-id'
+                    );
+                    
+                    const isInvalid = (
+                        !firebaseConfig.apiKey || 
+                        !firebaseConfig.projectId ||
+                        firebaseConfig.apiKey.trim() === '' ||
+                        firebaseConfig.projectId.trim() === ''
+                    );
+                    
+                    if (hasPlaceholders || isInvalid) {
+                        console.error('⚠️ Firebase configuration not updated or invalid.');
+                        firebaseInitError = 'Firebase Configuration Required: Please update __firebase_config in index.html with your project details. ' +
+                            'Get your config from Firebase Console > Project Settings. See server/README.md for setup instructions.';
                     } else {
                         const app = initializeApp(firebaseConfig);
                         auth = getAuth(app);
                         db = getFirestore(app);
                         
                         // Initialize App Check if reCAPTCHA site key is provided
-                        if (typeof __recaptcha_site_key !== 'undefined' && __recaptcha_site_key) {
+                        const hasRecaptchaPlaceholder = (__recaptcha_site_key === 'YOUR_RECAPTCHA_V3_SITE_KEY');
+                        const hasInvalidRecaptcha = (!__recaptcha_site_key || __recaptcha_site_key.trim() === '');
+                        
+                        if (typeof __recaptcha_site_key !== 'undefined' && __recaptcha_site_key && !hasInvalidRecaptcha) {
                             // Check if reCAPTCHA key has been updated from default
-                            if (__recaptcha_site_key === 'YOUR_RECAPTCHA_V3_SITE_KEY') {
+                            if (hasRecaptchaPlaceholder) {
                                 console.error('⚠️ reCAPTCHA site key not updated. Please configure App Check.');
-                                firebaseInitError = 'App Check Configuration Required: Please update the reCAPTCHA site key (__recaptcha_site_key variable in the <script> tag). ' +
+                                firebaseInitError = 'App Check Configuration Required: Please update __recaptcha_site_key in index.html. ' +
                                     'Get a key from https://www.google.com/recaptcha/admin';
                             } else {
                                 try {

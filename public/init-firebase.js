@@ -51,11 +51,24 @@ try {
         
         if (firebaseConfig) {
             // Check if configuration has been updated from placeholder defaults
-            if (firebaseConfig.apiKey === 'YOUR_FIREBASE_API_KEY' || 
-                firebaseConfig.projectId === 'your-project-id') {
-                console.warn('Firebase configuration contains placeholder values. Please update with real credentials.');
-                firebaseInitError = 'Firebase Configuration Required: Dreamweaver requires Firebase Cloud Functions to work. ' +
-                    'Please update the Firebase configuration with your project details. ' +
+            // Only show error if values are explicitly set to placeholder strings
+            const hasPlaceholders = (
+                firebaseConfig.apiKey === 'YOUR_FIREBASE_API_KEY' || 
+                firebaseConfig.projectId === 'your-project-id'
+            );
+            
+            // Check if Firebase config appears to be empty or invalid
+            const isInvalid = (
+                !firebaseConfig.apiKey || 
+                !firebaseConfig.projectId ||
+                firebaseConfig.apiKey.trim() === '' ||
+                firebaseConfig.projectId.trim() === ''
+            );
+            
+            if (hasPlaceholders || isInvalid) {
+                console.warn('Firebase configuration contains placeholder or invalid values.');
+                firebaseInitError = 'Firebase Configuration Required: Please update the Firebase configuration with your project details. ' +
+                    'Set __firebase_config and __recaptcha_site_key in index.html or use Firebase Hosting environment variables. ' +
                     'See server/README.md for setup instructions.';
             } else {
                 // Initialize Firebase app
@@ -66,13 +79,16 @@ try {
                     console.log('✓ Firebase app initialized successfully');
                     
                     // Initialize App Check if reCAPTCHA site key is provided
-                    if (typeof window.__recaptcha_site_key === 'undefined' || !window.__recaptcha_site_key) {
+                    const hasRecaptchaPlaceholder = (window.__recaptcha_site_key === 'YOUR_RECAPTCHA_V3_SITE_KEY');
+                    const hasInvalidRecaptcha = (!window.__recaptcha_site_key || window.__recaptcha_site_key.trim() === '');
+                    
+                    if (typeof window.__recaptcha_site_key === 'undefined' || hasInvalidRecaptcha) {
                         console.warn('App Check initialization skipped: window.__recaptcha_site_key not found');
                         firebaseInitError = 'App Check Not Configured: reCAPTCHA v3 site key is required. ' +
-                            'Please set window.__recaptcha_site_key in your deployment.';
-                    } else if (window.__recaptcha_site_key === 'YOUR_RECAPTCHA_V3_SITE_KEY') {
+                            'Please set window.__recaptcha_site_key in index.html. Get a key from https://www.google.com/recaptcha/admin';
+                    } else if (hasRecaptchaPlaceholder) {
                         console.warn('reCAPTCHA site key contains placeholder value. Please update with real key.');
-                        firebaseInitError = 'App Check Configuration Required: Please update the reCAPTCHA site key. ' +
+                        firebaseInitError = 'App Check Configuration Required: Please update the reCAPTCHA site key in index.html. ' +
                             'Get a key from https://www.google.com/recaptcha/admin';
                     } else {
                         // Initialize App Check
