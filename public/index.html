@@ -515,6 +515,64 @@
                         <img id="scene-image" src="" class="opacity-0">
                     </div>
                     
+                    <!-- Session Settings Summary -->
+                    <div class="glass p-6 rounded-[2.5rem] space-y-4">
+                        <div class="flex items-center justify-between mb-2">
+                            <div class="flex items-center gap-3">
+                                <div class="w-10 h-10 bg-indigo-500/20 rounded-xl flex items-center justify-center text-indigo-400">
+                                    <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
+                                        <circle cx="12" cy="12" r="3"></circle>
+                                        <path d="M12 1v6m0 6v6m-5.2-13A9 9 0 0 0 3 12c0 2.3.8 4.4 2.2 6M18.8 6A9 9 0 0 1 21 12c0 2.3-.8 4.4-2.2 6M3.3 17A9 9 0 0 0 12 21a9 9 0 0 0 8.7-4"></path>
+                                    </svg>
+                                </div>
+                                <div>
+                                    <p class="text-white font-black text-sm uppercase tracking-wider">Session Settings</p>
+                                    <p class="text-slate-400 text-[10px]">Active configuration</p>
+                                </div>
+                            </div>
+                            <button onclick="openSettingsModal()" class="w-8 h-8 bg-slate-700 hover:bg-slate-600 rounded-lg flex items-center justify-center transition-colors" title="Open full settings">
+                                <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
+                                    <path d="M9 18l6-6-6-6"></path>
+                                </svg>
+                            </button>
+                        </div>
+                        
+                        <div class="grid grid-cols-2 gap-3">
+                            <!-- Genre -->
+                            <div class="bg-slate-800/50 rounded-xl p-3">
+                                <label class="text-indigo-400 text-[9px] font-bold uppercase tracking-wider block mb-1">Genre</label>
+                                <p id="display-genre" class="text-white text-sm font-bold truncate">Fantasy</p>
+                            </div>
+                            
+                            <!-- Session Duration -->
+                            <div class="bg-slate-800/50 rounded-xl p-3">
+                                <label class="text-indigo-400 text-[9px] font-bold uppercase tracking-wider block mb-1">Duration</label>
+                                <p id="display-duration" class="text-white text-sm font-bold truncate">30 Minutes</p>
+                            </div>
+                            
+                            <!-- Score Dynamics -->
+                            <div class="bg-slate-800/50 rounded-xl p-3">
+                                <label class="text-indigo-400 text-[9px] font-bold uppercase tracking-wider block mb-1">Score Dynamics</label>
+                                <div class="flex items-center gap-2">
+                                    <div class="flex-1 flex gap-0.5">
+                                        <div id="dynamics-bar-1" class="flex-1 h-2 rounded-sm bg-indigo-500"></div>
+                                        <div id="dynamics-bar-2" class="flex-1 h-2 rounded-sm bg-indigo-500"></div>
+                                        <div id="dynamics-bar-3" class="flex-1 h-2 rounded-sm bg-indigo-500"></div>
+                                        <div id="dynamics-bar-4" class="flex-1 h-2 rounded-sm bg-slate-600"></div>
+                                        <div id="dynamics-bar-5" class="flex-1 h-2 rounded-sm bg-slate-600"></div>
+                                    </div>
+                                    <span id="display-dynamics" class="text-white text-xs font-bold">3/5</span>
+                                </div>
+                            </div>
+                            
+                            <!-- Music Source -->
+                            <div class="bg-slate-800/50 rounded-xl p-3">
+                                <label class="text-indigo-400 text-[9px] font-bold uppercase tracking-wider block mb-1">Music Source</label>
+                                <p id="display-music-source" class="text-white text-sm font-bold truncate">Spotify</p>
+                            </div>
+                        </div>
+                    </div>
+                    
                     <div class="glass p-8 rounded-[2.5rem] space-y-6">
                         <div class="flex items-center justify-between">
                             <div class="flex items-center gap-4">
@@ -2421,6 +2479,64 @@
             // Update reader playlist display when switching to reader view
             if (v === 'reader') {
                 updateReaderPlaylistDisplay();
+                updateSettingsDisplay();
+            }
+        }
+        
+        function updateSettingsDisplay() {
+            // Update genre display
+            const genreDisplay = document.getElementById('display-genre');
+            if (genreDisplay) {
+                genreDisplay.textContent = state.genre || 'Fantasy';
+            }
+            
+            // Update duration display
+            const durationDisplay = document.getElementById('display-duration');
+            if (durationDisplay) {
+                if (state.sleepMode) {
+                    durationDisplay.textContent = 'Sleep Mode';
+                } else {
+                    const minutes = Math.floor(state.timeLeftSeconds / 60);
+                    if (minutes >= 60) {
+                        const hours = Math.floor(minutes / 60);
+                        durationDisplay.textContent = hours === 1 ? '1 Hour' : `${hours} Hours`;
+                    } else {
+                        durationDisplay.textContent = `${minutes} Minutes`;
+                    }
+                }
+            }
+            
+            // Update score dynamics display
+            const scoreSensitivity = document.getElementById('score-sensitivity')?.value || 3;
+            const dynamicsDisplay = document.getElementById('display-dynamics');
+            if (dynamicsDisplay) {
+                dynamicsDisplay.textContent = `${scoreSensitivity}/5`;
+            }
+            
+            // Update dynamics bars
+            for (let i = 1; i <= 5; i++) {
+                const bar = document.getElementById(`dynamics-bar-${i}`);
+                if (bar) {
+                    if (i <= scoreSensitivity) {
+                        bar.classList.remove('bg-slate-600');
+                        bar.classList.add('bg-indigo-500');
+                    } else {
+                        bar.classList.remove('bg-indigo-500');
+                        bar.classList.add('bg-slate-600');
+                    }
+                }
+            }
+            
+            // Update music source display
+            const musicSourceDisplay = document.getElementById('display-music-source');
+            if (musicSourceDisplay) {
+                const source = state.musicSource || 'spotify';
+                const sourceNames = {
+                    'spotify': 'Spotify',
+                    'local': 'Local Files',
+                    'youtube': 'YouTube'
+                };
+                musicSourceDisplay.textContent = sourceNames[source] || 'Spotify';
             }
         }
         
@@ -2922,6 +3038,7 @@
         
         function toggleSleepMode(enabled) {
             settingsState.sleepMode = enabled;
+            state.sleepMode = enabled;
             
             if (enabled) {
                 // Enable sleep mode - set time to very large number
@@ -2935,12 +3052,14 @@
             
             syncSettingsUI();
             saveSettingsToStorage();
+            updateSettingsDisplay();
         }
         
         function updateSessionDuration(minutes) {
             if (!settingsState.sleepMode) {
                 state.timeLeftSeconds = parseInt(minutes) * 60;
                 saveSettingsToStorage();
+                updateSettingsDisplay();
             }
         }
         
