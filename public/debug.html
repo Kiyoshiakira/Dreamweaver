@@ -7,11 +7,10 @@
     This debug interface is configured for development/demo purposes.
     Before deploying to production, you MUST:
     
-    1. Update Firebase configuration (lines 512-521) with your actual values
-    2. Update reCAPTCHA site key (line 528) with your actual key
+    1. Update Firebase configuration (search for "TODO: Replace these placeholder values")
+    2. Update reCAPTCHA site key (search for "TODO: Replace with your actual")
     3. REMOVE demo access grants that bypass role checking:
-       - Line 613-616: Remove grantAccess() call in else block
-       - Line 619-621: Remove grantAccess() call in catch block
+       - Search for "DEVELOPMENT ONLY" comments and remove the grantAccess() calls
     4. Deploy Firestore rules with proper role-based access control
     5. Set up user roles in Firestore for authorized users
     
