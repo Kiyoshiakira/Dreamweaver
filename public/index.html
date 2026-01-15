@@ -101,7 +101,7 @@
                         const hasRecaptchaPlaceholder = (__recaptcha_site_key === 'YOUR_RECAPTCHA_V3_SITE_KEY');
                         const hasInvalidRecaptcha = (!__recaptcha_site_key || __recaptcha_site_key.trim() === '');
                         
-                        if (hasInvalidRecaptcha || hasRecaptchaPlaceholder) {
+                        if (hasRecaptchaPlaceholder || hasInvalidRecaptcha) {
                             console.error('⚠️ reCAPTCHA site key not provided or invalid.');
                             firebaseInitError = 'App Check Configuration Missing: Please update __recaptcha_site_key in public/index.html. ' +
                                 'Get your reCAPTCHA v3 site key from: https://www.google.com/recaptcha/admin';

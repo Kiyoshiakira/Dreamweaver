@@ -51,7 +51,7 @@ try {
         
         if (firebaseConfig) {
             // Check if configuration has been updated from placeholder defaults
-            // Only show error if values are explicitly set to placeholder strings
+            // or if values are empty/invalid
             const hasPlaceholders = (
                 firebaseConfig.apiKey === 'YOUR_FIREBASE_API_KEY' || 
                 firebaseConfig.projectId === 'your-project-id'

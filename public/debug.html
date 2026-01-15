@@ -677,10 +677,12 @@
                     auth = getAuth(app);
                     db = getFirestore(app);
                     
+                    // Check reCAPTCHA key validity
                     const hasRecaptchaPlaceholder = (__recaptcha_site_key === 'YOUR_RECAPTCHA_V3_SITE_KEY');
                     const hasInvalidRecaptcha = (!__recaptcha_site_key || __recaptcha_site_key.trim() === '');
+                    const hasValidRecaptcha = !hasRecaptchaPlaceholder && !hasInvalidRecaptcha;
                     
-                    if (!hasInvalidRecaptcha && !hasRecaptchaPlaceholder) {
+                    if (hasValidRecaptcha) {
                         appCheck = initializeAppCheck(app, {
                             provider: new ReCaptchaV3Provider(__recaptcha_site_key),
                             isTokenAutoRefreshEnabled: true
