@@ -19,7 +19,7 @@ The generative API key must be stored securely in Firebase Functions configurati
 firebase functions:config:set genai.key="YOUR_SERVER_SIDE_GENERATIVE_API_KEY"
 ```
 
-**Important:** Replace `YOUR_SERVER_SIDE_GENERATIVE_API_KEY` with your actual Google Generative Language API key. Get one from: https://makersuite.google.com/app/apikey
+**Important:** Replace `YOUR_SERVER_SIDE_GENERATIVE_API_KEY` with your actual Google Generative Language API key. Get one from: https://aistudio.google.com/app/apikey
 
 ### 2. Enable Required Google Cloud APIs
 
