@@ -1,4 +1,4 @@
-#!/bin/bash
+#!/usr/bin/env bash
 # Firebase Configuration Verification Script
 # This script checks that all Firebase configuration files point to the correct project
 
@@ -28,8 +28,18 @@ if [ ! -f ".firebaserc" ]; then
     echo -e "${RED}✗ .firebaserc not found${NC}"
     ERRORS=$((ERRORS+1))
 else
-    PROJECT_ID=$(grep -o '"default"[[:space:]]*:[[:space:]]*"[^"]*"' .firebaserc | cut -d'"' -f4)
-    if [ "$PROJECT_ID" == "$EXPECTED_PROJECT" ]; then
+    # Try to use jq if available, otherwise fall back to grep
+    if command -v jq &> /dev/null; then
+        PROJECT_ID=$(jq -r '.projects.default // empty' .firebaserc 2>/dev/null)
+    else
+        # Fallback to grep/cut with error handling
+        PROJECT_ID=$(grep -o '"default"[[:space:]]*:[[:space:]]*"[^"]*"' .firebaserc 2>/dev/null | cut -d'"' -f4)
+    fi
+    
+    if [ -z "$PROJECT_ID" ]; then
+        echo -e "${RED}✗ Could not parse .firebaserc (file may be malformed)${NC}"
+        ERRORS=$((ERRORS+1))
+    elif [ "$PROJECT_ID" == "$EXPECTED_PROJECT" ]; then
         echo -e "${GREEN}✓ .firebaserc correctly configured: $PROJECT_ID${NC}"
     else
         echo -e "${RED}✗ .firebaserc has wrong project: $PROJECT_ID (expected: $EXPECTED_PROJECT)${NC}"
@@ -140,8 +150,16 @@ echo "Checking Firebase CLI..."
 if command -v firebase &> /dev/null; then
     echo -e "${GREEN}✓ Firebase CLI installed${NC}"
     
-    # Check current project
-    if firebase use 2>&1 | grep -q "$EXPECTED_PROJECT"; then
+    # Check current project with error handling
+    FIREBASE_PROJECT=$(firebase use 2>&1)
+    FIREBASE_EXIT_CODE=$?
+    
+    if [ $FIREBASE_EXIT_CODE -ne 0 ]; then
+        echo -e "${YELLOW}⚠ Firebase CLI not initialized or not logged in${NC}"
+        echo "  Run: firebase login"
+        echo "  Then: firebase use $EXPECTED_PROJECT"
+        WARNINGS=$((WARNINGS+1))
+    elif echo "$FIREBASE_PROJECT" | grep -q "$EXPECTED_PROJECT"; then
         echo -e "${GREEN}✓ Firebase CLI is using correct project${NC}"
     else
         echo -e "${YELLOW}⚠ Firebase CLI may be using different project${NC}"
