@@ -776,7 +776,19 @@
         function logRequest(endpoint, request, response, timing) {
             if (!loggingEnabled) return;
             
-            // Create a copy of request with redacted prompts for display
+            // Always store the original request in requestLog
+            const logEntry = {
+                timestamp: new Date().toISOString(),
+                endpoint,
+                request: request, // Store original
+                response,
+                timing,
+                success: !response.error
+            };
+            
+            requestLog.push(logEntry);
+            
+            // Create a copy with redacted prompts for display only
             const displayRequest = { ...request };
             if (displayRequest.prompt) {
                 displayRequest.prompt = redactPrompt(displayRequest.prompt);
@@ -785,24 +797,10 @@
                 displayRequest.systemInstruction = redactPrompt(displayRequest.systemInstruction);
             }
             
-            const logEntry = {
-                timestamp: new Date().toISOString(),
-                endpoint,
-                request: displayRequest,
-                response,
-                timing,
-                success: !response.error
+            const displayLogEntry = {
+                ...logEntry,
+                request: displayRequest
             };
-            
-            // Store the original request in requestLog for export
-            requestLog.push({
-                timestamp: new Date().toISOString(),
-                endpoint,
-                request: showFullPrompts ? request : displayRequest,
-                response,
-                timing,
-                success: !response.error
-            });
             
             const requestLogDiv = document.getElementById('request-log');
             const entry = document.createElement('div');
@@ -813,7 +811,7 @@
             entry.innerHTML = `
                 <strong>${endpoint}</strong> - ${timing}ms
                 <br><small>${logEntry.timestamp}</small>
-                <br><pre style="margin-top: 4px; font-size: 0.8rem;">${JSON.stringify(logEntry, null, 2).substring(0, 200)}...</pre>
+                <br><pre style="margin-top: 4px; font-size: 0.8rem;">${JSON.stringify(displayLogEntry, null, 2).substring(0, 200)}...</pre>
             `;
             requestLogDiv.appendChild(entry);
             requestLogDiv.scrollTop = requestLogDiv.scrollHeight;
@@ -1011,7 +1009,25 @@
         };
         
         window.exportLog = function() {
-            const dataStr = JSON.stringify(requestLog, null, 2);
+            // Apply redaction to exports if showFullPrompts is false
+            let exportData = requestLog;
+            if (!showFullPrompts) {
+                exportData = requestLog.map(entry => {
+                    const redactedEntry = { ...entry };
+                    if (entry.request) {
+                        redactedEntry.request = { ...entry.request };
+                        if (redactedEntry.request.prompt) {
+                            redactedEntry.request.prompt = redactPrompt(redactedEntry.request.prompt);
+                        }
+                        if (redactedEntry.request.systemInstruction) {
+                            redactedEntry.request.systemInstruction = redactPrompt(redactedEntry.request.systemInstruction);
+                        }
+                    }
+                    return redactedEntry;
+                });
+            }
+            
+            const dataStr = JSON.stringify(exportData, null, 2);
             const dataBlob = new Blob([dataStr], { type: 'application/json' });
             const url = URL.createObjectURL(dataBlob);
             const link = document.createElement('a');
@@ -1019,7 +1035,7 @@
             link.download = `dreamweaver-debug-log-${Date.now()}.json`;
             link.click();
             URL.revokeObjectURL(url);
-            logConsole('Log exported to file', 'success');
+            logConsole('Log exported to file' + (showFullPrompts ? ' (full)' : ' (redacted)'), 'success');
         };
         
         window.testError = function() {
