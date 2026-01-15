@@ -76,47 +76,53 @@
                     const firebaseConfig = JSON.parse(__firebase_config);
                     
                     // Check if configuration has been updated from defaults
-                    if (firebaseConfig.apiKey === 'YOUR_FIREBASE_API_KEY' || 
-                        firebaseConfig.projectId === 'your-project-id') {
-                        console.error('⚠️ Firebase configuration not updated. Please configure Firebase.');
-                        firebaseInitError = 'Firebase Configuration Required: Dreamweaver requires Firebase Cloud Functions to work. ' +
-                            'Please update the Firebase configuration (__firebase_config variable in the <script> tag) with your project details. ' +
-                            'See server/README.md for setup instructions.';
+                    const hasPlaceholders = (
+                        firebaseConfig.apiKey === 'YOUR_FIREBASE_API_KEY' || 
+                        firebaseConfig.projectId === 'your-project-id'
+                    );
+                    
+                    const isInvalid = (
+                        !firebaseConfig.apiKey || 
+                        !firebaseConfig.projectId ||
+                        firebaseConfig.apiKey.trim() === '' ||
+                        firebaseConfig.projectId.trim() === ''
+                    );
+                    
+                    if (hasPlaceholders || isInvalid) {
+                        console.error('⚠️ Firebase configuration not updated or invalid.');
+                        firebaseInitError = 'Firebase Configuration Missing: Please update __firebase_config in public/index.html with your Firebase project settings. ' +
+                            'Get your config from: Firebase Console > Project Settings > Your apps > SDK setup and configuration.';
                     } else {
                         const app = initializeApp(firebaseConfig);
                         auth = getAuth(app);
                         db = getFirestore(app);
                         
                         // Initialize App Check if reCAPTCHA site key is provided
-                        if (typeof __recaptcha_site_key !== 'undefined' && __recaptcha_site_key) {
-                            // Check if reCAPTCHA key has been updated from default
-                            if (__recaptcha_site_key === 'YOUR_RECAPTCHA_V3_SITE_KEY') {
-                                console.error('⚠️ reCAPTCHA site key not updated. Please configure App Check.');
-                                firebaseInitError = 'App Check Configuration Required: Please update the reCAPTCHA site key (__recaptcha_site_key variable in the <script> tag). ' +
-                                    'Get a key from https://www.google.com/recaptcha/admin';
-                            } else {
-                                try {
-                                    appCheck = initializeAppCheck(app, {
-                                        provider: new ReCaptchaV3Provider(__recaptcha_site_key),
-                                        isTokenAutoRefreshEnabled: true
-                                    });
-                                    console.log('✓ Firebase App Check initialized successfully');
-                                } catch (appCheckError) {
-                                    console.error('App Check initialization failed:', appCheckError.message);
-                                    firebaseInitError = 'App Check Initialization Failed: ' + appCheckError.message + '. ' +
-                                        'Dreamweaver will not function without App Check. Please verify your reCAPTCHA v3 site key.';
-                                }
-                            }
+                        const hasRecaptchaPlaceholder = (__recaptcha_site_key === 'YOUR_RECAPTCHA_V3_SITE_KEY');
+                        const hasInvalidRecaptcha = (!__recaptcha_site_key || __recaptcha_site_key.trim() === '');
+                        
+                        if (hasRecaptchaPlaceholder || hasInvalidRecaptcha) {
+                            console.error('⚠️ reCAPTCHA site key not provided or invalid.');
+                            firebaseInitError = 'App Check Configuration Missing: Please update __recaptcha_site_key in public/index.html. ' +
+                                'Get your reCAPTCHA v3 site key from: https://www.google.com/recaptcha/admin';
                         } else {
-                            console.error('⚠️ reCAPTCHA site key not provided');
-                            firebaseInitError = 'App Check Not Configured: reCAPTCHA v3 site key is required. ' +
-                                'Please set __recaptcha_site_key variable in the <script> tag.';
+                            try {
+                                appCheck = initializeAppCheck(app, {
+                                    provider: new ReCaptchaV3Provider(__recaptcha_site_key),
+                                    isTokenAutoRefreshEnabled: true
+                                });
+                                console.log('✓ Firebase App Check initialized successfully');
+                            } catch (appCheckError) {
+                                console.error('App Check initialization failed:', appCheckError.message);
+                                firebaseInitError = 'App Check Initialization Failed: ' + appCheckError.message + '. ' +
+                                    'Dreamweaver will not function without App Check. Please verify your reCAPTCHA v3 site key.';
+                            }
                         }
                     }
                 } else {
                     console.error('⚠️ Firebase configuration not provided');
-                    firebaseInitError = 'Firebase Not Configured: Dreamweaver requires Firebase Cloud Functions. ' +
-                        'Please configure Firebase in index.html. See server/README.md for instructions.';
+                    firebaseInitError = 'Firebase Configuration Missing: Please update __firebase_config in public/index.html. ' +
+                        'Get your config from: Firebase Console > Project Settings > Your apps.';
                 }
             } catch (error) {
                 console.error('Firebase initialization failed:', error.message);
@@ -265,26 +271,29 @@
        // CONFIGURATION: Firebase & App Check (Client-Side Only)
        // ========================================================================
        // SECURITY NOTE: Never commit real Firebase API keys, reCAPTCHA site keys,
-       // or generative API keys to version control. This file should be configured
-       // per deployment. See NEXT_STEPS.md for server-side configuration.
+       // or generative API keys to version control.
        //
-       // For server-side API key setup and deployment, see NEXT_STEPS.md
+       // HOW TO CONFIGURE:
+       // 1. Get your Firebase config from: Firebase Console > Project Settings > Your apps
+       // 2. Get your reCAPTCHA site key from: https://www.google.com/recaptcha/admin
+       // 3. Replace the empty strings below with your actual values
+       // 4. For the Gemini API key, use: firebase functions:config:set genai.key="YOUR_KEY"
        //
-       // IMPORTANT: Replace these placeholder values with your actual Firebase configuration
-       // before deploying to production. Get your config from Firebase Console.
+       // See server/README.md for complete deployment instructions.
+       
+       // Replace with your Firebase project configuration (from Firebase Console)
        const __firebase_config = JSON.stringify({
-            apiKey: "YOUR_FIREBASE_API_KEY",
-            authDomain: "your-project.firebaseapp.com",
-            projectId: "your-project-id",
-            storageBucket: "your-project.firebasestorage.app",
-            messagingSenderId: "YOUR_MESSAGING_SENDER_ID",
-            appId: "YOUR_APP_ID",
-            measurementId: "YOUR_MEASUREMENT_ID"
+            apiKey: "",  // Your Firebase API key here
+            authDomain: "",  // Your authDomain here (e.g., "your-project.firebaseapp.com")
+            projectId: "",  // Your project ID here
+            storageBucket: "",  // Your storage bucket here
+            messagingSenderId: "",  // Your messaging sender ID here
+            appId: "",  // Your app ID here
+            measurementId: ""  // Your measurement ID here (optional)
        });
 
-       // reCAPTCHA v3 Site Key for Firebase App Check
-       // IMPORTANT: Replace with your actual reCAPTCHA v3 site key from https://www.google.com/recaptcha/admin
-       const __recaptcha_site_key = "YOUR_RECAPTCHA_V3_SITE_KEY";
+       // Replace with your reCAPTCHA v3 site key (from https://www.google.com/recaptcha/admin)
+       const __recaptcha_site_key = "";  // Your reCAPTCHA v3 site key here
     </script>
     <!-- Starfield background -->
     <div class="starfield" id="starfield"></div>

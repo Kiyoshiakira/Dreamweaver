@@ -536,22 +536,21 @@
         import { initializeAppCheck, ReCaptchaV3Provider } from "https://www.gstatic.com/firebasejs/11.6.1/firebase-app-check.js";
         
         // CONFIGURATION - Must match main app configuration
-        // TODO: Replace these placeholder values with your actual Firebase configuration
+        // IMPORTANT: Replace these empty values with your actual Firebase configuration
         // Get your config from: Firebase Console > Project Settings > Your apps
-        // For production deployment, consider using environment variables or server-side config
         const __firebase_config = JSON.stringify({
-            apiKey: "YOUR_FIREBASE_API_KEY",
-            authDomain: "your-project.firebaseapp.com",
-            projectId: "your-project-id",
-            storageBucket: "your-project.firebasestorage.app",
-            messagingSenderId: "YOUR_MESSAGING_SENDER_ID",
-            appId: "YOUR_APP_ID",
-            measurementId: "YOUR_MEASUREMENT_ID"
+            apiKey: "",  // Your Firebase API key
+            authDomain: "",  // Your authDomain
+            projectId: "",  // Your project ID
+            storageBucket: "",  // Your storage bucket
+            messagingSenderId: "",  // Your messaging sender ID
+            appId: "",  // Your app ID
+            measurementId: ""  // Your measurement ID (optional)
         });
         
-        // TODO: Replace with your actual reCAPTCHA v3 site key
+        // Replace with your actual reCAPTCHA v3 site key
         // Get from: https://www.google.com/recaptcha/admin
-        const __recaptcha_site_key = "YOUR_RECAPTCHA_V3_SITE_KEY";
+        const __recaptcha_site_key = "";  // Your reCAPTCHA v3 site key
         
         let auth = null;
         let db = null;
@@ -659,20 +658,40 @@
                 // Fallback: initialize Firebase inline if init-firebase.js didn't run
                 const firebaseConfig = JSON.parse(__firebase_config);
                 
-                if (firebaseConfig.apiKey === 'YOUR_FIREBASE_API_KEY') {
-                    showError('Firebase not configured. Please update the configuration in this file.');
+                const hasPlaceholders = (
+                    firebaseConfig.apiKey === 'YOUR_FIREBASE_API_KEY' ||
+                    firebaseConfig.projectId === 'your-project-id'
+                );
+                
+                const isInvalid = (
+                    !firebaseConfig.apiKey || 
+                    !firebaseConfig.projectId ||
+                    firebaseConfig.apiKey.trim() === '' ||
+                    firebaseConfig.projectId.trim() === ''
+                );
+                
+                if (hasPlaceholders || isInvalid) {
+                    showError('Firebase Configuration Missing: Please update __firebase_config in debug.html with your Firebase project settings. Get your config from Firebase Console > Project Settings.');
                 } else {
                     const app = initializeApp(firebaseConfig);
                     auth = getAuth(app);
                     db = getFirestore(app);
                     
-                    if (__recaptcha_site_key && __recaptcha_site_key !== 'YOUR_RECAPTCHA_V3_SITE_KEY') {
+                    // Check reCAPTCHA key validity
+                    const hasRecaptchaPlaceholder = (__recaptcha_site_key === 'YOUR_RECAPTCHA_V3_SITE_KEY');
+                    const hasInvalidRecaptcha = (!__recaptcha_site_key || __recaptcha_site_key.trim() === '');
+                    const hasValidRecaptcha = !hasRecaptchaPlaceholder && !hasInvalidRecaptcha;
+                    
+                    if (hasValidRecaptcha) {
                         appCheck = initializeAppCheck(app, {
                             provider: new ReCaptchaV3Provider(__recaptcha_site_key),
                             isTokenAutoRefreshEnabled: true
                         });
                         updateConfigStatus('appcheck-status', '✅');
                         logConsole('App Check initialized', 'success');
+                    } else {
+                        updateConfigStatus('appcheck-status', '⚠️');
+                        logConsole('App Check not configured (reCAPTCHA key missing or invalid)', 'warning');
                     }
                     
                     updateConfigStatus('firebase-status', '✅');
