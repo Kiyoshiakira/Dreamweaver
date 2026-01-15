@@ -67,9 +67,9 @@ try {
             
             if (hasPlaceholders || isInvalid) {
                 console.warn('Firebase configuration contains placeholder or invalid values.');
-                firebaseInitError = 'Firebase Configuration Required: Please update the Firebase configuration with your project details. ' +
-                    'Set __firebase_config and __recaptcha_site_key in index.html or use Firebase Hosting environment variables. ' +
-                    'See server/README.md for setup instructions.';
+                firebaseInitError = 'Firebase Configuration Missing: Please update the __firebase_config in public/index.html with your Firebase project settings. ' +
+                    'Get your config from: Firebase Console > Project Settings > Your apps > SDK setup and configuration. ' +
+                    'Copy the config object and paste it into index.html at line ~288.';
             } else {
                 // Initialize Firebase app
                 try {
@@ -84,12 +84,14 @@ try {
                     
                     if (typeof window.__recaptcha_site_key === 'undefined' || hasInvalidRecaptcha) {
                         console.warn('App Check initialization skipped: window.__recaptcha_site_key not found');
-                        firebaseInitError = 'App Check Not Configured: reCAPTCHA v3 site key is required. ' +
-                            'Please set window.__recaptcha_site_key in index.html. Get a key from https://www.google.com/recaptcha/admin';
+                        firebaseInitError = 'App Check Configuration Missing: Please update the __recaptcha_site_key in public/index.html. ' +
+                            'Get your reCAPTCHA v3 site key from: https://www.google.com/recaptcha/admin ' +
+                            'Then add your domain(s) and copy the site key into index.html at line ~301.';
                     } else if (hasRecaptchaPlaceholder) {
                         console.warn('reCAPTCHA site key contains placeholder value. Please update with real key.');
-                        firebaseInitError = 'App Check Configuration Required: Please update the reCAPTCHA site key in index.html. ' +
-                            'Get a key from https://www.google.com/recaptcha/admin';
+                        firebaseInitError = 'App Check Configuration Missing: Please update the __recaptcha_site_key in public/index.html. ' +
+                            'Get your reCAPTCHA v3 site key from: https://www.google.com/recaptcha/admin ' +
+                            'Then add your domain(s) and copy the site key into index.html at line ~301.';
                     } else {
                         // Initialize App Check
                         try {
