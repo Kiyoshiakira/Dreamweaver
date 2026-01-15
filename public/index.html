@@ -43,96 +43,40 @@
     <link href="https://fonts.googleapis.com/css2?family=Crimson+Pro:ital,wght@0,400;0,700;1,400&family=Inter:wght@400;700;900&display=swap" rel="stylesheet">
     <script src="https://sdk.scdn.co/spotify-player.js"></script>
     
+    <script>
+       // ========================================================================
+       // CONFIGURATION: Firebase & App Check (Client-Side Only)
+       // ========================================================================
+       // SECURITY NOTE: Never commit real Firebase API keys, reCAPTCHA site keys,
+       // or generative API keys to version control.
+       //
+       // HOW TO CONFIGURE:
+       // 1. Get your Firebase config from: Firebase Console > Project Settings > Your apps
+       // 2. Get your reCAPTCHA site key from: https://www.google.com/recaptcha/admin
+       // 3. Replace the empty strings below with your actual values
+       // 4. For the Gemini API key, use: firebase functions:config:set genai.key="YOUR_KEY"
+       //
+       // See server/README.md for complete deployment instructions.
+       
+       // Replace with your Firebase project configuration (from Firebase Console)
+       window.__firebase_config = JSON.stringify({
+            apiKey: "",  // Your Firebase API key here
+            authDomain: "",  // Your authDomain here (e.g., "your-project.firebaseapp.com")
+            projectId: "",  // Your project ID here
+            storageBucket: "",  // Your storage bucket here
+            messagingSenderId: "",  // Your messaging sender ID here
+            appId: "",  // Your app ID here
+            measurementId: ""  // Your measurement ID here (optional)
+       });
+
+       // Replace with your reCAPTCHA v3 site key (from https://www.google.com/recaptcha/admin)
+       window.__recaptcha_site_key = "";  // Your reCAPTCHA v3 site key here
+    </script>
+    
     <!-- Firebase + App Check initialization module -->
     <script src="/init-firebase.js" type="module"></script>
     
-    <script type="module">
-        import { initializeApp } from "https://www.gstatic.com/firebasejs/11.6.1/firebase-app.js";
-        import { getAuth, signInAnonymously, signInWithCustomToken, onAuthStateChanged } from "https://www.gstatic.com/firebasejs/11.6.1/firebase-auth.js";
-        import { getFirestore, collection, doc, addDoc, getDocs, query, where, onSnapshot, deleteDoc, updateDoc } from "https://www.gstatic.com/firebasejs/11.6.1/firebase-firestore.js";
-        import { initializeAppCheck, ReCaptchaV3Provider } from "https://www.gstatic.com/firebasejs/11.6.1/firebase-app-check.js";
-
-        // Firebase configuration - REQUIRED for Dreamweaver to function
-        // NOTE: Firebase initialization now handled by init-firebase.js module
-        // This code serves as a fallback if the module hasn't run yet
-        let auth = null;
-        let db = null;
-        let appCheck = null;
-        let firebaseInitError = null; // Store error to display later
-        const appId = typeof __app_id !== 'undefined' ? __app_id : 'narrative-engine-infinite';
-        
-        // Check if init-firebase.js already initialized Firebase
-        if (typeof window.fb !== 'undefined' && window.fb.auth) {
-            // Use the already-initialized Firebase from init-firebase.js
-            auth = window.fb.auth;
-            db = window.fb.db;
-            appCheck = window.fb.appCheck;
-            firebaseInitError = window.fb.firebaseInitError;
-            console.log('Using Firebase initialization from init-firebase.js module');
-        } else {
-            // Fallback: initialize Firebase inline (legacy path)
-            try {
-                if (typeof __firebase_config !== 'undefined') {
-                    const firebaseConfig = JSON.parse(__firebase_config);
-                    
-                    // Check if configuration has been updated from defaults
-                    const hasPlaceholders = (
-                        firebaseConfig.apiKey === 'YOUR_FIREBASE_API_KEY' || 
-                        firebaseConfig.projectId === 'your-project-id'
-                    );
-                    
-                    const isInvalid = (
-                        !firebaseConfig.apiKey || 
-                        !firebaseConfig.projectId ||
-                        firebaseConfig.apiKey.trim() === '' ||
-                        firebaseConfig.projectId.trim() === ''
-                    );
-                    
-                    if (hasPlaceholders || isInvalid) {
-                        console.error('⚠️ Firebase configuration not updated or invalid.');
-                        firebaseInitError = 'Firebase Configuration Missing: Please update __firebase_config in public/index.html with your Firebase project settings. ' +
-                            'Get your config from: Firebase Console > Project Settings > Your apps > SDK setup and configuration.';
-                    } else {
-                        const app = initializeApp(firebaseConfig);
-                        auth = getAuth(app);
-                        db = getFirestore(app);
-                        
-                        // Initialize App Check if reCAPTCHA site key is provided
-                        const hasRecaptchaPlaceholder = (__recaptcha_site_key === 'YOUR_RECAPTCHA_V3_SITE_KEY');
-                        const hasInvalidRecaptcha = (!__recaptcha_site_key || __recaptcha_site_key.trim() === '');
-                        
-                        if (hasRecaptchaPlaceholder || hasInvalidRecaptcha) {
-                            console.error('⚠️ reCAPTCHA site key not provided or invalid.');
-                            firebaseInitError = 'App Check Configuration Missing: Please update __recaptcha_site_key in public/index.html. ' +
-                                'Get your reCAPTCHA v3 site key from: https://www.google.com/recaptcha/admin';
-                        } else {
-                            try {
-                                appCheck = initializeAppCheck(app, {
-                                    provider: new ReCaptchaV3Provider(__recaptcha_site_key),
-                                    isTokenAutoRefreshEnabled: true
-                                });
-                                console.log('✓ Firebase App Check initialized successfully');
-                            } catch (appCheckError) {
-                                console.error('App Check initialization failed:', appCheckError.message);
-                                firebaseInitError = 'App Check Initialization Failed: ' + appCheckError.message + '. ' +
-                                    'Dreamweaver will not function without App Check. Please verify your reCAPTCHA v3 site key.';
-                            }
-                        }
-                    }
-                } else {
-                    console.error('⚠️ Firebase configuration not provided');
-                    firebaseInitError = 'Firebase Configuration Missing: Please update __firebase_config in public/index.html. ' +
-                        'Get your config from: Firebase Console > Project Settings > Your apps.';
-                }
-            } catch (error) {
-                console.error('Firebase initialization failed:', error.message);
-                firebaseInitError = 'Firebase Initialization Failed: ' + error.message + '. ' +
-                    'Please check your Firebase configuration in index.html.';
-            }
-
-            window.fb = { auth, db, appId, appCheck, firebaseInitError };
-        }
-
+    <script>
         // Spotify Configuration
         // IMPORTANT: Replace SPOTIFY_CLIENT_ID with your actual Spotify Client ID from https://developer.spotify.com/dashboard
         // This is a placeholder value and must be updated for Spotify integration to work
@@ -266,35 +210,6 @@
     </style>
 </head>
 <body class="selection:bg-indigo-500/30">
-    <script>
-       // ========================================================================
-       // CONFIGURATION: Firebase & App Check (Client-Side Only)
-       // ========================================================================
-       // SECURITY NOTE: Never commit real Firebase API keys, reCAPTCHA site keys,
-       // or generative API keys to version control.
-       //
-       // HOW TO CONFIGURE:
-       // 1. Get your Firebase config from: Firebase Console > Project Settings > Your apps
-       // 2. Get your reCAPTCHA site key from: https://www.google.com/recaptcha/admin
-       // 3. Replace the empty strings below with your actual values
-       // 4. For the Gemini API key, use: firebase functions:config:set genai.key="YOUR_KEY"
-       //
-       // See server/README.md for complete deployment instructions.
-       
-       // Replace with your Firebase project configuration (from Firebase Console)
-       const __firebase_config = JSON.stringify({
-            apiKey: "",  // Your Firebase API key here
-            authDomain: "",  // Your authDomain here (e.g., "your-project.firebaseapp.com")
-            projectId: "",  // Your project ID here
-            storageBucket: "",  // Your storage bucket here
-            messagingSenderId: "",  // Your messaging sender ID here
-            appId: "",  // Your app ID here
-            measurementId: ""  // Your measurement ID here (optional)
-       });
-
-       // Replace with your reCAPTCHA v3 site key (from https://www.google.com/recaptcha/admin)
-       const __recaptcha_site_key = "";  // Your reCAPTCHA v3 site key here
-    </script>
     <!-- Starfield background -->
     <div class="starfield" id="starfield"></div>
     <div class="moon"></div>
