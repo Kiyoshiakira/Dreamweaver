@@ -1,0 +1,20 @@
+# This file was auto-generated to ensure Firebase deployment is properly configured.
+# Deploy to Firebase Hosting on merge to main branch
+
+name: Deploy to Firebase Hosting on merge
+'on':
+  push:
+    branches:
+      - main
+jobs:
+  build_and_deploy:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+      - name: Deploy to Firebase Hosting
+        uses: FirebaseExtended/action-hosting-deploy@v0
+        with:
+          repoToken: '${{ secrets.GITHUB_TOKEN }}'
+          firebaseServiceAccount: '${{ secrets.FIREBASE_SERVICE_ACCOUNT_DREAMWEAVER_10D8E }}'
+          channelId: live
+          projectId: dreamweaver-10d8e

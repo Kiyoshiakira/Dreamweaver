@@ -89,7 +89,19 @@ Dreamweaver is a single-page web application that combines multiple AI technolog
    cd Dreamweaver
    ```
 
-2. **Configure API Keys** (⚠️ IMPORTANT - Security First!):
+2. **Configure Firebase Project**:
+   
+   This repository is configured to deploy to Firebase project: **dreamweaver-10d8e**
+   
+   **Quick verification**: Run `./verify-firebase-config.sh` to check your setup.
+   
+   **📖 Complete deployment guide**: See [FIREBASE_DEPLOYMENT_GUIDE.md](FIREBASE_DEPLOYMENT_GUIDE.md) for:
+   - Manual deployment via Firebase CLI
+   - Automated deployment via GitHub Actions
+   - Troubleshooting common issues
+   - Project configuration verification
+
+3. **Configure API Keys** (⚠️ IMPORTANT - Security First!):
    
    **⚠️ SECURITY WARNING**: Never commit API keys to version control!
    
