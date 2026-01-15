@@ -1,0 +1,122 @@
+/**
+ * Firebase and App Check Initialization Module
+ * 
+ * This module initializes Firebase app and App Check (reCAPTCHA v3 provider)
+ * using configuration values from window.__firebase_config and window.__recaptcha_site_key.
+ * 
+ * Initialization is defensive: if config values are missing or invalid, the module
+ * will log a concise console message and leave existing checks in place rather than throwing.
+ * 
+ * Side effects:
+ * - Sets window.fb with { auth, db, appId, appCheck, firebaseInitError }
+ * - Compatible with existing code that expects window.fb and window.fb.appCheck
+ * 
+ * Usage:
+ * Include this script BEFORE any scripts that rely on window.fb:
+ *   <script src="/init-firebase.js" type="module"></script>
+ */
+
+import { initializeApp } from "https://www.gstatic.com/firebasejs/11.6.1/firebase-app.js";
+import { getAuth } from "https://www.gstatic.com/firebasejs/11.6.1/firebase-auth.js";
+import { getFirestore } from "https://www.gstatic.com/firebasejs/11.6.1/firebase-firestore.js";
+import { initializeAppCheck, ReCaptchaV3Provider } from "https://www.gstatic.com/firebasejs/11.6.1/firebase-app-check.js";
+
+// Default app ID
+const appId = typeof window.__app_id !== 'undefined' ? window.__app_id : 'narrative-engine-infinite';
+
+let auth = null;
+let db = null;
+let appCheck = null;
+let firebaseInitError = null;
+
+try {
+    // Check if Firebase config is available
+    if (typeof window.__firebase_config === 'undefined') {
+        console.warn('Firebase initialization skipped: window.__firebase_config not found');
+        firebaseInitError = 'Firebase Not Configured: window.__firebase_config is not defined. ' +
+            'Please configure Firebase in your deployment. See server/README.md for instructions.';
+    } else {
+        // Parse Firebase config
+        let firebaseConfig;
+        try {
+            firebaseConfig = typeof window.__firebase_config === 'string' 
+                ? JSON.parse(window.__firebase_config) 
+                : window.__firebase_config;
+        } catch (parseError) {
+            console.error('Failed to parse Firebase config:', parseError.message);
+            firebaseInitError = 'Firebase Configuration Error: Invalid JSON in window.__firebase_config. ' +
+                'Please check your configuration format.';
+            firebaseConfig = null;
+        }
+        
+        if (firebaseConfig) {
+            // Check if configuration has been updated from placeholder defaults
+            if (firebaseConfig.apiKey === 'YOUR_FIREBASE_API_KEY' || 
+                firebaseConfig.projectId === 'your-project-id') {
+                console.warn('Firebase configuration contains placeholder values. Please update with real credentials.');
+                firebaseInitError = 'Firebase Configuration Required: Dreamweaver requires Firebase Cloud Functions to work. ' +
+                    'Please update the Firebase configuration with your project details. ' +
+                    'See server/README.md for setup instructions.';
+            } else {
+                // Initialize Firebase app
+                try {
+                    const app = initializeApp(firebaseConfig);
+                    auth = getAuth(app);
+                    db = getFirestore(app);
+                    console.log('✓ Firebase app initialized successfully');
+                    
+                    // Initialize App Check if reCAPTCHA site key is provided
+                    if (typeof window.__recaptcha_site_key === 'undefined' || !window.__recaptcha_site_key) {
+                        console.warn('App Check initialization skipped: window.__recaptcha_site_key not found');
+                        firebaseInitError = 'App Check Not Configured: reCAPTCHA v3 site key is required. ' +
+                            'Please set window.__recaptcha_site_key in your deployment.';
+                    } else if (window.__recaptcha_site_key === 'YOUR_RECAPTCHA_V3_SITE_KEY') {
+                        console.warn('reCAPTCHA site key contains placeholder value. Please update with real key.');
+                        firebaseInitError = 'App Check Configuration Required: Please update the reCAPTCHA site key. ' +
+                            'Get a key from https://www.google.com/recaptcha/admin';
+                    } else {
+                        // Initialize App Check
+                        try {
+                            appCheck = initializeAppCheck(app, {
+                                provider: new ReCaptchaV3Provider(window.__recaptcha_site_key),
+                                isTokenAutoRefreshEnabled: true
+                            });
+                            console.log('✓ Firebase App Check initialized successfully');
+                            // Clear error since both Firebase and App Check are working
+                            firebaseInitError = null;
+                        } catch (appCheckError) {
+                            console.error('App Check initialization failed:', appCheckError.message);
+                            firebaseInitError = 'App Check Initialization Failed: ' + appCheckError.message + '. ' +
+                                'Dreamweaver may not function without App Check. Please verify your reCAPTCHA v3 site key.';
+                        }
+                    }
+                } catch (initError) {
+                    console.error('Firebase app initialization failed:', initError.message);
+                    firebaseInitError = 'Firebase Initialization Failed: ' + initError.message + '. ' +
+                        'Please check your Firebase configuration.';
+                }
+            }
+        }
+    }
+} catch (error) {
+    // Catch any unexpected errors during initialization
+    console.error('Unexpected error during Firebase initialization:', error.message);
+    firebaseInitError = 'Firebase Initialization Error: ' + error.message;
+}
+
+// Always set window.fb, even if initialization failed
+// This ensures existing code that checks for window.fb will work
+window.fb = {
+    auth,
+    db,
+    appId,
+    appCheck,
+    firebaseInitError
+};
+
+// Log completion status
+if (firebaseInitError) {
+    console.warn('Firebase initialization completed with errors. Check window.fb.firebaseInitError for details.');
+} else {
+    console.log('✓ Firebase module initialization complete');
+}
