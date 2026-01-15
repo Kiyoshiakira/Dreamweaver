@@ -31,10 +31,10 @@ gcloud services enable generativelanguage.googleapis.com \
   cloudfunctions.googleapis.com \
   storage.googleapis.com \
   firestore.googleapis.com \
-  --project=dreamweaver-10d8e
+  --project=YOUR_FIREBASE_PROJECT_ID
 ```
 
-**Note:** Replace `dreamweaver-10d8e` with your actual Firebase project ID.
+**Note:** Replace `YOUR_FIREBASE_PROJECT_ID` with your actual Firebase project ID.
 
 ### 3. Deploy Firebase Functions
 
@@ -87,7 +87,7 @@ console.log('App Check Token:', token.token);
 2. **Test the generateTTS function with curl:**
 
 ```bash
-curl -X POST https://us-central1-dreamweaver-10d8e.cloudfunctions.net/generateTTS \
+curl -X POST https://YOUR_REGION-YOUR_PROJECT_ID.cloudfunctions.net/generateTTS \
   -H "Content-Type: application/json" \
   -H "X-Firebase-AppCheck: YOUR_APP_CHECK_TOKEN_HERE" \
   -d '{
@@ -102,7 +102,7 @@ Expected: JSON response with base64-encoded audio in `candidates[0].content.part
 3. **Test the generateStory function:**
 
 ```bash
-curl -X POST https://us-central1-dreamweaver-10d8e.cloudfunctions.net/generateStory \
+curl -X POST https://YOUR_REGION-YOUR_PROJECT_ID.cloudfunctions.net/generateStory \
   -H "Content-Type: application/json" \
   -H "X-Firebase-AppCheck: YOUR_APP_CHECK_TOKEN_HERE" \
   -d '{
