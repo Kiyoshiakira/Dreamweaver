@@ -112,42 +112,10 @@ Dreamweaver is a single-page web application that combines multiple AI technolog
       });
       const __recaptcha_site_key = "YOUR_RECAPTCHA_V3_SITE_KEY";
       ```
-   4. Deploy: `firebase deploy --only functions`
    
-   **Option B: Local Development Only (NOT for production)**
+   **IMPORTANT**: Firebase Cloud Functions setup is REQUIRED. The application does not support direct API calls for security reasons.
    
-   For quick local testing only (NOT recommended for production or public deployment):
-   
-   1. Copy the configuration template:
-      ```bash
-      cp config.example.js config.local.js
-      ```
-   2. Edit `config.local.js` and add your API keys
-   3. The file is already in `.gitignore` so it won't be committed
-   4. Reference it in `public/index.html` or manually update line 575:
-      ```javascript
-      const apiKey = "YOUR_API_KEY"; // Only for local development!
-      ```
-   5. **NEVER** deploy with hardcoded keys!
-   
-   **Option C: Environment-specific Configuration**
-   
-   For advanced users who want to maintain separate configs:
-   
-   1. Create a local config file: `cp config.example.js config.local.js`
-   2. Add your keys to `config.local.js`
-   3. Include it before the main script in `index.html`:
-      ```html
-      <script src="config.local.js"></script>
-      <script>
-        // Use the config variables defined in config.local.js
-        const apiKey = genAIApiKey || "";
-        // ... rest of your code
-      </script>
-      ```
-   4. For production, use Option A (Firebase Proxy)
-   
-   The app will automatically use the Firebase proxy when configured, and fall back to direct API calls if not.
+   All API calls (story generation, text-to-speech, image generation) are routed through secure Firebase Cloud Functions.
 
 3. **Set up Spotify Integration (Optional)**:
    - Go to [Spotify Developer Dashboard](https://developer.spotify.com/dashboard)
@@ -263,11 +231,11 @@ Dreamweaver is a single-page web application that combines multiple AI technolog
 6. **Spotify Integration**: When logged in, searches Spotify for tracks matching the detected mood
 7. **Change Song Feature**: Users can request a different song while maintaining the same genre/mood
 
-### Secure API Proxy (Optional)
+### Secure API Proxy (Required)
 - **Firebase Cloud Functions** proxy for Generative Language API
 - **App Check verification** prevents unauthorized access using reCAPTCHA v3
 - **Server-side API key** storage keeps credentials secure
-- **Automatic fallback** to direct API calls if proxy not configured
+- **No direct API calls** - all requests go through secure proxies
 - **Rate limiting** recommendations for production deployment
 - See [server/README.md](server/README.md) for setup instructions
 

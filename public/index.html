@@ -28,7 +28,6 @@
             https://fonts.gstatic.com;
         img-src 'self' data: https: blob:;
         connect-src 'self' 
-            https://generativelanguage.googleapis.com 
             https://accounts.spotify.com 
             https://api.spotify.com 
             https://firebasestorage.googleapis.com 
@@ -317,7 +316,7 @@
                         <div class="bg-slate-900/50 rounded-lg p-2 font-mono text-xs text-yellow-100">
                             <div class="text-yellow-400 font-bold mb-1">Recommended: Serve over HTTP</div>
                             <div class="text-slate-300">python -m http.server 8000</div>
-                            <div class="text-slate-400 text-[10px] mt-1">Then visit: http://localhost:8000/dreamweaver.html</div>
+                            <div class="text-slate-400 text-[10px] mt-1">Then visit: http://localhost:8000/index.html</div>
                         </div>
                     </div>
                     <button onclick="document.getElementById('file-protocol-warning').classList.add('hidden')" 
@@ -1740,17 +1739,45 @@
                 // Display user-friendly error message explaining the failure
                 let errorMessage = '⚠️ Story Generation Failed\n\n';
                 
-                // Provide specific guidance based on error type
-                if (error.message && error.message.includes('403')) {
-                    errorMessage += 'API Key Issue: The API key may be invalid, expired, or restricted.\n\n';
+                // Provide specific guidance based on error type from the proxy functions
+                if (error.message && error.message.includes('PROXY_NOT_CONFIGURED')) {
+                    errorMessage += 'Firebase Configuration Issue: Firebase Cloud Functions are not configured.\n\n';
+                    errorMessage += 'Please set up Firebase:\n';
+                    errorMessage += '1. Configure Firebase in index.html (__firebase_config)\n';
+                    errorMessage += '2. Set up reCAPTCHA v3 for App Check (__recaptcha_site_key)\n';
+                    errorMessage += '3. Deploy Cloud Functions with API key configured\n';
+                    errorMessage += 'See server/README.md for detailed setup instructions.\n\n';
+                } else if (error.message && (error.message.includes('PROXY_AUTH_FAILED') || error.message.includes('APP_CHECK'))) {
+                    errorMessage += 'App Check Verification Failed: Security verification could not be completed.\n\n';
+                    errorMessage += 'Please ensure:\n';
+                    errorMessage += '• reCAPTCHA v3 site key is correctly configured\n';
+                    errorMessage += '• Firebase App Check is properly initialized\n';
+                    errorMessage += '• Your domain is added to the reCAPTCHA allowlist\n\n';
+                } else if (error.message && error.message.includes('PROXY_UPSTREAM_ERROR')) {
+                    errorMessage += 'Backend API Issue: The Cloud Function cannot communicate with Google AI API.\n\n';
                     errorMessage += 'Possible causes:\n';
-                    errorMessage += '• API key is restricted to specific domains/IPs\n';
-                    errorMessage += '• API key has insufficient permissions\n';
-                    errorMessage += '• API quota has been exceeded\n\n';
-                } else if (error.message && (error.message.includes('CORS') || error.message.includes('fetch'))) {
-                    errorMessage += 'Network Issue: Unable to reach the generation API.\n\n';
+                    errorMessage += '• API key not configured in Firebase Functions\n';
+                    errorMessage += '• API key is invalid or expired\n';
+                    errorMessage += '• API quota has been exceeded\n';
+                    errorMessage += '• Generative Language API not enabled\n\n';
+                    errorMessage += 'To configure: firebase functions:config:set genai.key="YOUR_KEY"\n';
+                    errorMessage += 'Then redeploy: firebase deploy --only functions\n\n';
+                } else if (error.message && error.message.includes('PROXY_SERVER_ERROR')) {
+                    errorMessage += 'Server Error: The Cloud Function encountered an internal error.\n\n';
+                    errorMessage += 'Please check Firebase Functions logs for details:\n';
+                    errorMessage += '  firebase functions:log\n\n';
+                } else if (error.message && error.message.includes('PROXY_ERROR')) {
+                    errorMessage += 'Proxy Communication Error: Failed to communicate with the backend.\n\n';
+                    errorMessage += 'Error details: ' + error.message + '\n\n';
+                } else if (error.message && error.message.includes('PROXY_REQUEST_FAILED')) {
+                    errorMessage += 'Request Failed: Network or connectivity issue.\n\n';
+                    errorMessage += 'Please check:\n';
+                    errorMessage += '• Your internet connection\n';
+                    errorMessage += '• Firebase Cloud Functions are deployed and accessible\n';
+                    errorMessage += '• Browser console for detailed error messages\n\n';
                 } else {
-                    errorMessage += 'An unexpected error occurred during generation.\n\n';
+                    errorMessage += 'An unexpected error occurred.\n\n';
+                    errorMessage += 'Error details: ' + (error.message || 'Unknown error') + '\n\n';
                 }
                 
                 // Add file:// protocol specific guidance
@@ -1759,11 +1786,11 @@
                     errorMessage += 'This can cause API restrictions and CORS issues.\n\n';
                     errorMessage += 'Please serve the app over HTTP instead:\n';
                     errorMessage += '  python -m http.server 8000\n';
-                    errorMessage += '  Then visit: http://localhost:8000/dreamweaver.html\n\n';
+                    errorMessage += '  Then visit: http://localhost:8000/index.html\n\n';
                 }
                 
                 errorMessage += 'A demo chapter has been loaded so you can explore the music player and visuals.\n';
-                errorMessage += 'Fix the API configuration to enable full story generation.';
+                errorMessage += 'Fix the configuration issues to enable full story generation with AI narration and images.';
                 
                 // Show error message using non-intrusive banner instead of blocking alert
                 // Convert newlines to HTML breaks for proper display
@@ -1982,8 +2009,14 @@
             } catch (error) {
                 console.error('TTS generation failed:', error);
                 
-                // Show error banner
-                if (error.message.includes('PROXY_NOT_CONFIGURED') || error.message.includes('Firebase configuration is required')) {
+                // Show error banner with specific guidance
+                if (error.message && error.message.includes('PROXY_NOT_CONFIGURED')) {
+                    showTransientBanner('⚠️ Text-to-Speech Failed: Firebase not configured. Please set up Firebase Cloud Functions and App Check. See server/README.md for instructions.', 'error');
+                } else if (error.message && (error.message.includes('PROXY_AUTH_FAILED') || error.message.includes('APP_CHECK'))) {
+                    showTransientBanner('⚠️ Text-to-Speech Failed: App Check verification failed. Please configure reCAPTCHA v3 site key.', 'error');
+                } else if (error.message && error.message.includes('TTS_PROXY_ERROR')) {
+                    showTransientBanner('⚠️ Text-to-Speech Failed: Backend API issue. Ensure API key is configured in Firebase Functions: firebase functions:config:set genai.key="YOUR_KEY"', 'error');
+                } else if (error.message && error.message.includes('Firebase configuration is required')) {
                     showTransientBanner('⚠️ Text-to-Speech Failed: Firebase not configured. Please set up Firebase Cloud Functions.', 'error');
                 } else {
                     showTransientBanner(`⚠️ Text-to-Speech Failed: ${error.message}`, 'error');
@@ -2039,8 +2072,17 @@
             } catch (err) {
                 console.error('Visual generation error:', err);
                 
-                // Show error banner only for non-config errors (config errors shown once during init)
-                if (!err.message.includes('Firebase configuration is required')) {
+                // Show error banner with specific guidance
+                if (err.message && err.message.includes('PROXY_NOT_CONFIGURED')) {
+                    showTransientBanner('⚠️ Image Generation Failed: Firebase not configured. Please set up Firebase Cloud Functions.', 'warning');
+                } else if (err.message && (err.message.includes('PROXY_AUTH_FAILED') || err.message.includes('APP_CHECK'))) {
+                    showTransientBanner('⚠️ Image Generation Failed: App Check verification failed.', 'warning');
+                } else if (err.message && err.message.includes('IMAGE_PROXY_ERROR')) {
+                    showTransientBanner('⚠️ Image Generation Failed: Backend API issue. Check Firebase Functions configuration.', 'warning');
+                } else if (err.message && err.message.includes('Firebase configuration is required')) {
+                    // Don't show banner for config errors (shown once during init)
+                    console.log('Image generation skipped - Firebase not configured');
+                } else {
                     showTransientBanner(`⚠️ Image Generation Failed: ${err.message}`, 'warning');
                 }
                 
@@ -2865,7 +2907,7 @@
                 console.warn('');
                 console.warn('Recommended: Serve over HTTP using:');
                 console.warn('  python -m http.server 8000');
-                console.warn('  Then visit: http://localhost:8000/dreamweaver.html');
+                console.warn('  Then visit: http://localhost:8000/index.html');
             }
             
             const vs = document.getElementById('voice-select');
