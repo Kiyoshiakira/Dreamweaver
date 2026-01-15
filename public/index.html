@@ -2292,7 +2292,12 @@
                         }
                     }
                 }
-                playCycle().catch(err => console.error('Playback cycle error:', err)); 
+                playCycle().catch(err => console.error('Playback cycle error:', err));
+                
+                // Start settings interval for auto-save and recording updates
+                if (typeof startSettingsInterval !== 'undefined') {
+                    startSettingsInterval();
+                }
             } 
             else { 
                 if (state.currentAudio) {
@@ -2306,6 +2311,11 @@
                     if (typeof MusicPlayer !== 'undefined') {
                         MusicPlayer.pause();
                     }
+                }
+                
+                // Stop settings interval when paused
+                if (typeof stopSettingsInterval !== 'undefined') {
+                    stopSettingsInterval();
                 }
             }
         }
@@ -2931,12 +2941,15 @@
         // Sleep Mode Functions
         // ============================================================================
         
+        // Sleep mode "unlimited" time constant (~31 years in seconds)
+        const SLEEP_MODE_TIME_SECONDS = 999999999;
+        
         function toggleSleepMode(enabled) {
             settingsState.sleepMode = enabled;
             
             if (enabled) {
                 // Enable sleep mode - set time to very large number
-                state.timeLeftSeconds = 999999999; // ~31 years
+                state.timeLeftSeconds = SLEEP_MODE_TIME_SECONDS;
                 document.getElementById('session-timer').textContent = '∞ SLEEP MODE';
             } else {
                 // Disable sleep mode - restore to selected duration
@@ -3045,6 +3058,11 @@
         
         function startAudioRecording() {
             try {
+                // Validate that audio element exists and is ready
+                if (!state.currentAudio || !state.currentAudio.src) {
+                    throw new Error('No audio source available for recording');
+                }
+                
                 // Create a MediaStreamDestination to capture audio
                 const audioContext = new (window.AudioContext || window.webkitAudioContext)();
                 const destination = audioContext.createMediaStreamDestination();
@@ -3137,13 +3155,16 @@
                 return;
             }
             
+            const scoreSensitivity = document.getElementById('score-sensitivity');
+            const scoreDynamicsValue = scoreSensitivity ? (parseInt(scoreSensitivity.value) || 3) : 3;
+            
             const preset = {
                 name: presetName,
                 voice: document.getElementById('voice-select-reader').value,
                 genre: state.genre,
                 sessionDuration: parseInt(document.getElementById('length-select-reader').value),
                 sleepMode: settingsState.sleepMode,
-                scoreDynamics: parseInt(document.getElementById('score-sensitivity')?.value || 3),
+                scoreDynamics: scoreDynamicsValue,
                 musicSource: state.musicSource,
                 autoSave: settingsState.autoSave,
                 maxStorySize: settingsState.maxStorySize,
@@ -3214,24 +3235,38 @@
                 return;
             }
             
-            presetList.innerHTML = presets.map(preset => `
+            // Helper function to escape HTML
+            function escapeHtml(text) {
+                const div = document.createElement('div');
+                div.textContent = text;
+                return div.innerHTML;
+            }
+            
+            presetList.innerHTML = presets.map(preset => {
+                const safeName = escapeHtml(preset.name);
+                const safeVoice = escapeHtml(preset.voice);
+                const safeGenre = escapeHtml(preset.genre);
+                const safeDuration = preset.sleepMode ? 'Sleep Mode' : escapeHtml(preset.sessionDuration + ' min');
+                
+                return `
                 <div class="flex items-center justify-between p-3 bg-slate-800 rounded-xl">
                     <div class="flex-1">
-                        <div class="text-white font-bold text-sm">${preset.name}</div>
+                        <div class="text-white font-bold text-sm">${safeName}</div>
                         <div class="text-slate-400 text-xs mt-1">
-                            ${preset.voice} • ${preset.genre} • ${preset.sleepMode ? 'Sleep Mode' : preset.sessionDuration + ' min'}
+                            ${safeVoice} • ${safeGenre} • ${safeDuration}
                         </div>
                     </div>
                     <div class="flex gap-2">
-                        <button onclick="loadPreset('${preset.name}')" class="px-3 py-1 bg-indigo-600 hover:bg-indigo-500 rounded-lg text-xs font-bold transition-all active:scale-95">
+                        <button onclick="loadPreset('${safeName.replace(/'/g, "\\'")}')" class="px-3 py-1 bg-indigo-600 hover:bg-indigo-500 rounded-lg text-xs font-bold transition-all active:scale-95">
                             Load
                         </button>
-                        <button onclick="deletePreset('${preset.name}')" class="px-3 py-1 bg-red-600 hover:bg-red-500 rounded-lg text-xs font-bold transition-all active:scale-95">
+                        <button onclick="deletePreset('${safeName.replace(/'/g, "\\'")}')" class="px-3 py-1 bg-red-600 hover:bg-red-500 rounded-lg text-xs font-bold transition-all active:scale-95">
                             Delete
                         </button>
                     </div>
                 </div>
-            `).join('');
+            `;
+            }).join('');
         }
         
         function exportPresets() {
@@ -3329,17 +3364,35 @@
             }
         }
         
-        // Update auto-save periodically during playback
-        setInterval(() => {
-            if (state.isPlaying && settingsState.autoSave) {
-                autoSaveStory();
-            }
+        // Update auto-save and recording status periodically during playback
+        let settingsIntervalId = null;
+        
+        function startSettingsInterval() {
+            // Only start if not already running
+            if (settingsIntervalId) return;
             
-            // Update recording status if recording
-            if (settingsState.audioRecording && settingsState.mediaRecorder?.state === 'recording') {
-                updateRecordingStatus();
+            settingsIntervalId = setInterval(() => {
+                // Auto-save if enabled and playing
+                if (state.isPlaying && settingsState.autoSave) {
+                    autoSaveStory();
+                }
+                
+                // Update recording status if recording
+                if (settingsState.audioRecording && settingsState.mediaRecorder?.state === 'recording') {
+                    updateRecordingStatus();
+                }
+            }, 5000); // Every 5 seconds
+        }
+        
+        function stopSettingsInterval() {
+            if (settingsIntervalId) {
+                clearInterval(settingsIntervalId);
+                settingsIntervalId = null;
             }
-        }, 5000); // Every 5 seconds
+        }
+        
+        // Start the interval when playback begins, stop when it ends
+        // Note: This should be called from the existing togglePlayback() function
     </script>
     
     <!-- Music Player Module -->
