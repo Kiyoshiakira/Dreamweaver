@@ -3,21 +3,18 @@
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no">
-    <!-- Content Security Policy: Defines allowed sources for scripts, styles, and other resources
-         IMPORTANT: 'unsafe-eval' is required for Spotify Web Playback SDK to function properly.
-         The Spotify SDK dynamically evaluates JavaScript code for player functionality.
-         'unsafe-inline' is used for inline scripts and styles present in this HTML file.
-         If hosting on a platform with server-side CSP headers, ensure those headers also include 'unsafe-eval'. -->
+    <!-- Content Security Policy: Allows reCAPTCHA, Firebase, Spotify, and generative AI endpoints.
+         IMPORTANT: 'unsafe-eval' required for Spotify SDK. 'unsafe-inline' for inline scripts.
+         Update server-side CSP headers to match if deployed with additional security layers. -->
     <meta http-equiv="Content-Security-Policy" content="
         default-src 'self';
         script-src 'self' 'unsafe-inline' 'unsafe-eval' 
             https://cdn.tailwindcss.com 
             https://sdk.scdn.co 
             https://www.gstatic.com 
-            https://www.google-analytics.com 
-            https://ssl.google-analytics.com 
             https://www.google.com 
             https://www.google.com/recaptcha/ 
+            https://www.gstatic.com/recaptcha/ 
             https://*.googletagmanager.com 
             https://accounts.scdn.co
             https://www.youtube.com;
@@ -32,9 +29,12 @@
             https://api.spotify.com 
             https://firebasestorage.googleapis.com 
             https://*.googleapis.com
-            https://www.gstatic.com;
+            https://generativelanguage.googleapis.com
+            https://texttospeech.googleapis.com
+            https://www.gstatic.com
+            https://www.google.com;
         media-src 'self' https: blob:;
-        frame-src https://accounts.spotify.com https://sdk.scdn.co https://www.youtube.com https://www.youtube-nocookie.com https://www.google.com https://recaptcha.google.com;
+        frame-src https://accounts.spotify.com https://sdk.scdn.co https://www.youtube.com https://www.youtube-nocookie.com https://www.google.com https://recaptcha.google.com https://www.google.com/recaptcha/;
     ">
     <title>Dreamweaver</title>
     <!-- Note: Tailwind CDN is used for development convenience. For production deployment,
@@ -246,40 +246,28 @@
 <body class="selection:bg-indigo-500/30">
     <script>
        // ========================================================================
-       // REQUIRED: Firebase Configuration
+       // CONFIGURATION: Firebase & App Check (Client-Side Only)
        // ========================================================================
-       // Dreamweaver requires Firebase Cloud Functions to work. All API calls
-       // (story generation, text-to-speech, image generation) are routed through
-       // secure Firebase Cloud Functions to protect API keys.
+       // SECURITY NOTE: Never commit real Firebase API keys, reCAPTCHA site keys,
+       // or generative API keys to version control. This file should be configured
+       // per deployment. See NEXT_STEPS.md for server-side configuration.
        //
-       // Setup Steps:
-       // 1. Create a Firebase project: https://console.firebase.google.com/
-       // 2. Get your Firebase config from: Project Settings > Your apps > Web app
-       // 3. Replace the values below with your Firebase configuration
-       // 4. Set up Cloud Functions (see server/README.md for instructions):
-       //    - Configure API key: firebase functions:config:set genai.key="YOUR_KEY"
-       //    - Deploy functions: firebase deploy --only functions
-       // 5. Set up Firebase App Check with reCAPTCHA v3 (required for security)
+       // For server-side API key setup and deployment, see NEXT_STEPS.md
        //
-       // IMPORTANT: DO NOT commit real API keys to public repositories
-       // 
+       // IMPORTANT: Replace these placeholder values with your actual Firebase configuration
+       // before deploying to production. Get your config from Firebase Console.
        const __firebase_config = JSON.stringify({
             apiKey: "YOUR_FIREBASE_API_KEY",
             authDomain: "your-project.firebaseapp.com",
             projectId: "your-project-id",
             storageBucket: "your-project.firebasestorage.app",
-            messagingSenderId: "123456789",
-            appId: "1:123456789:web:abcdef123456",
-            measurementId: "G-XXXXXXXXXX"
+            messagingSenderId: "YOUR_MESSAGING_SENDER_ID",
+            appId: "YOUR_APP_ID",
+            measurementId: "YOUR_MEASUREMENT_ID"
        });
 
-       // ========================================================================
-       // REQUIRED: reCAPTCHA v3 Site Key (for Firebase App Check)
-       // ========================================================================
-       // Get from: https://www.google.com/recaptcha/admin
-       // Create a v3 site key and add your domain(s) (including localhost for dev)
-       // App Check protects your Cloud Functions from abuse
-       //
+       // reCAPTCHA v3 Site Key for Firebase App Check
+       // IMPORTANT: Replace with your actual reCAPTCHA v3 site key from https://www.google.com/recaptcha/admin
        const __recaptcha_site_key = "YOUR_RECAPTCHA_V3_SITE_KEY";
     </script>
     <!-- Starfield background -->
