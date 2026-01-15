@@ -1,6 +1,28 @@
 rules_version = '2';
 service cloud.firestore {
   match /databases/{database}/documents {
+    // User roles and profiles
+    match /users/{userId} {
+      // Users can read their own profile
+      allow read: if request.auth != null && request.auth.uid == userId;
+      // Only admins can write user roles
+      allow write: if request.auth != null && 
+        get(/databases/$(database)/documents/users/$(request.auth.uid)).data.role == 'admin';
+    }
+    
+    // Debug logs - only accessible to developers and testers
+    match /debug_logs/{logId} {
+      allow read, write: if request.auth != null && 
+        get(/databases/$(database)/documents/users/$(request.auth.uid)).data.role in ['admin', 'developer', 'tester'];
+    }
+    
+    // Test results - only accessible to developers and testers
+    match /test_results/{testId} {
+      allow read, write: if request.auth != null && 
+        get(/databases/$(database)/documents/users/$(request.auth.uid)).data.role in ['admin', 'developer', 'tester'];
+    }
+    
+    // General documents - authenticated users only
     match /{document=**} {
       allow read, write: if request.auth != null;
     }

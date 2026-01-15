@@ -283,8 +283,15 @@
                 <h1 class="text-xl font-black tracking-tighter uppercase">Dream<span class="text-indigo-500">weaver</span></h1>
             </div>
             
-            <div id="session-timer" class="hidden glass px-6 py-2 rounded-full border border-indigo-500/30 font-mono text-indigo-400 font-bold timer-glow" title="Time remaining in your story session. Story generation stops when timer reaches zero">
-                00:00:00
+            <div class="flex items-center gap-4">
+                <!-- Debug Mode Indicator (visible when debug=true in URL) -->
+                <a id="debug-link" href="debug.html" class="hidden glass px-4 py-2 rounded-full border border-yellow-500/30 text-yellow-400 text-xs font-bold hover:bg-yellow-500/10 transition-colors" title="Access debug and testing area">
+                    🔧 Debug
+                </a>
+                
+                <div id="session-timer" class="hidden glass px-6 py-2 rounded-full border border-indigo-500/30 font-mono text-indigo-400 font-bold timer-glow" title="Time remaining in your story session. Story generation stops when timer reaches zero">
+                    00:00:00
+                </div>
             </div>
         </nav>
 
@@ -3632,6 +3639,25 @@
                 shootingStar.classList.add(shootDelays[i % shootDelays.length]); // Distribute delays sequentially for consistent spacing
                 
                 starfield.appendChild(shootingStar);
+            }
+        })();
+    </script>
+    
+    <!-- Debug Mode Detection -->
+    <script>
+        // Show debug link if debug parameter is present or user has special access
+        (function checkDebugMode() {
+            const urlParams = new URLSearchParams(window.location.search);
+            const debugMode = urlParams.get('debug') === 'true';
+            
+            // Show debug link if in debug mode
+            if (debugMode) {
+                const debugLink = document.getElementById('debug-link');
+                if (debugLink) {
+                    debugLink.classList.remove('hidden');
+                }
+                console.log('%c🔧 Debug Mode Active', 'color: #facc15; font-size: 14px; font-weight: bold;');
+                console.log('%cAccess debug area at: debug.html', 'color: #94a3b8; font-size: 12px;');
             }
         })();
     </script>

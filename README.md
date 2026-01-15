@@ -302,12 +302,28 @@ For more detailed documentation, please visit the [Wiki](../../wiki):
 
 ---
 
+## 🔧 Debug & Testing Area
+
+Dreamweaver includes a comprehensive debug and testing area for developers and testers:
+
+- **AI Function Testing**: Test story generation, TTS, and image generation individually
+- **Request Inspector**: Monitor API calls with detailed timing and response data
+- **Debug Console**: Real-time logging with verbose mode and error tracking
+- **Configuration Validator**: Verify Firebase and API key setup
+
+**Access:** Navigate to `debug.html` or add `?debug=true` to the main URL to reveal the debug link.
+
+See [DEBUG.md](DEBUG.md) for complete documentation and setup instructions.
+
+---
+
 ## 🗺️ Roadmap
 
 - [x] Spotify integration for personalized music selection
 - [x] Change song feature to switch tracks while maintaining mood
 - [x] Local file upload for custom audio tracks
 - [x] YouTube integration for video audio playback
+- [x] Debug & testing area for developers and testers
 - [ ] Expand default music library with more genre-specific tracks
 - [ ] Full Spotify Web Playback SDK integration for complete track playback
 - [ ] Add user story saving/loading functionality
