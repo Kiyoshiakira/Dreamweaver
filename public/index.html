@@ -610,6 +610,179 @@
                         <select id="voice-select-reader" onchange="changeVoice(this.value)" class="bg-slate-800 border border-white/10 rounded-xl px-4 py-2 text-white text-sm appearance-none cursor-pointer hover:bg-slate-700 transition-colors" title="Change the narrator's voice during playback. Audio will be regenerated with the new voice">
                         </select>
                     </div>
+                    
+                    <!-- Settings Button -->
+                    <button onclick="openSettingsModal()" class="w-12 h-12 bg-slate-700 rounded-2xl flex items-center justify-center text-white shadow-lg hover:bg-slate-600 active:scale-95 transition-all" title="Open settings and options">
+                        <svg width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
+                            <circle cx="12" cy="12" r="3"></circle>
+                            <path d="M12 1v6m0 6v6m-5.2-13A9 9 0 0 0 3 12c0 2.3.8 4.4 2.2 6M18.8 6A9 9 0 0 1 21 12c0 2.3-.8 4.4-2.2 6M3.3 17A9 9 0 0 0 12 21a9 9 0 0 0 8.7-4"></path>
+                        </svg>
+                    </button>
+                </div>
+            </div>
+        </div>
+        
+        <!-- Settings Modal -->
+        <div id="settings-modal" class="hidden fixed inset-0 z-[100] flex items-center justify-center p-4 bg-black/70 backdrop-blur-sm">
+            <div class="bg-slate-900 rounded-3xl shadow-2xl border border-white/10 max-w-4xl w-full max-h-[90vh] overflow-hidden flex flex-col">
+                <!-- Modal Header -->
+                <div class="flex items-center justify-between p-6 border-b border-white/10">
+                    <h2 class="text-2xl font-black text-white">Settings & Options</h2>
+                    <button onclick="closeSettingsModal()" class="w-10 h-10 rounded-xl bg-slate-800 hover:bg-slate-700 flex items-center justify-center transition-colors">
+                        <svg width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
+                            <path d="M18 6L6 18M6 6l12 12"></path>
+                        </svg>
+                    </button>
+                </div>
+                
+                <!-- Modal Content with Tabs -->
+                <div class="flex-1 overflow-y-auto p-6">
+                    <!-- Tab Navigation -->
+                    <div class="flex gap-2 mb-6 border-b border-white/10 pb-2">
+                        <button onclick="switchSettingsTab('general')" id="tab-general" class="px-4 py-2 rounded-xl font-bold text-sm transition-all bg-indigo-600 text-white">
+                            General
+                        </button>
+                        <button onclick="switchSettingsTab('audio')" id="tab-audio" class="px-4 py-2 rounded-xl font-bold text-sm transition-all text-slate-400 hover:text-white">
+                            Audio & Recording
+                        </button>
+                        <button onclick="switchSettingsTab('presets')" id="tab-presets" class="px-4 py-2 rounded-xl font-bold text-sm transition-all text-slate-400 hover:text-white">
+                            Presets
+                        </button>
+                    </div>
+                    
+                    <!-- General Settings Tab -->
+                    <div id="settings-general" class="space-y-6">
+                        <h3 class="text-lg font-bold text-white mb-4">Session Settings</h3>
+                        
+                        <!-- Sleep Mode Toggle -->
+                        <div class="space-y-2 p-4 bg-slate-800 rounded-2xl">
+                            <div class="flex items-center justify-between">
+                                <div>
+                                    <label class="text-indigo-400 text-sm font-bold uppercase tracking-wider">Sleep Mode</label>
+                                    <p class="text-slate-400 text-xs mt-1">Unlimited story length with no timer</p>
+                                </div>
+                                <label class="relative inline-flex items-center cursor-pointer">
+                                    <input type="checkbox" id="sleep-mode-toggle" onchange="toggleSleepMode(this.checked)" class="sr-only peer">
+                                    <div class="w-14 h-7 bg-slate-700 peer-focus:outline-none peer-focus:ring-2 peer-focus:ring-indigo-500 rounded-full peer peer-checked:after:translate-x-full peer-checked:after:border-white after:content-[''] after:absolute after:top-[2px] after:left-[2px] after:bg-white after:rounded-full after:h-6 after:w-6 after:transition-all peer-checked:bg-indigo-600"></div>
+                                </label>
+                            </div>
+                        </div>
+                        
+                        <!-- Session Duration (hidden in sleep mode) -->
+                        <div id="session-duration-setting" class="space-y-2 p-4 bg-slate-800 rounded-2xl">
+                            <label class="text-indigo-400 text-sm font-bold uppercase tracking-wider">Session Duration</label>
+                            <select id="length-select-reader" onchange="updateSessionDuration(this.value)" class="w-full bg-slate-900 border border-white/10 rounded-xl p-3 text-white appearance-none cursor-pointer">
+                                <option value="5">5 Minutes</option>
+                                <option value="30">30 Minutes</option>
+                                <option value="60">1 Hour</option>
+                                <option value="120">2 Hours</option>
+                            </select>
+                        </div>
+                        
+                        <!-- Auto-Save Story -->
+                        <div class="space-y-2 p-4 bg-slate-800 rounded-2xl">
+                            <div class="flex items-center justify-between mb-3">
+                                <div>
+                                    <label class="text-indigo-400 text-sm font-bold uppercase tracking-wider">Auto-Save Story</label>
+                                    <p class="text-slate-400 text-xs mt-1">Automatically save story content to browser storage</p>
+                                </div>
+                                <label class="relative inline-flex items-center cursor-pointer">
+                                    <input type="checkbox" id="auto-save-toggle" onchange="toggleAutoSave(this.checked)" class="sr-only peer">
+                                    <div class="w-14 h-7 bg-slate-700 peer-focus:outline-none peer-focus:ring-2 peer-focus:ring-indigo-500 rounded-full peer peer-checked:after:translate-x-full peer-checked:after:border-white after:content-[''] after:absolute after:top-[2px] after:left-[2px] after:bg-white after:rounded-full after:h-6 after:w-6 after:transition-all peer-checked:bg-indigo-600"></div>
+                                </label>
+                            </div>
+                            <div class="space-y-2">
+                                <label class="text-slate-400 text-xs">Max Story Size (KB)</label>
+                                <input type="number" id="max-story-size" value="500" min="100" max="5000" step="100" class="w-full bg-slate-900 border border-white/10 rounded-xl p-2 text-white text-sm">
+                            </div>
+                        </div>
+                        
+                        <!-- Export Story Button -->
+                        <button onclick="exportStory()" class="w-full py-3 bg-indigo-600 hover:bg-indigo-500 rounded-2xl font-bold text-sm transition-all active:scale-95 flex items-center justify-center gap-2">
+                            <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
+                                <path d="M21 15v4a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2v-4"></path>
+                                <polyline points="7 10 12 15 17 10"></polyline>
+                                <line x1="12" y1="15" x2="12" y2="3"></line>
+                            </svg>
+                            Export Story to File
+                        </button>
+                    </div>
+                    
+                    <!-- Audio & Recording Tab -->
+                    <div id="settings-audio" class="hidden space-y-6">
+                        <h3 class="text-lg font-bold text-white mb-4">Audio Recording</h3>
+                        
+                        <!-- Recording Toggle -->
+                        <div class="space-y-2 p-4 bg-slate-800 rounded-2xl">
+                            <div class="flex items-center justify-between">
+                                <div>
+                                    <label class="text-indigo-400 text-sm font-bold uppercase tracking-wider">Record Audio</label>
+                                    <p class="text-slate-400 text-xs mt-1">Save narration audio to download later</p>
+                                </div>
+                                <label class="relative inline-flex items-center cursor-pointer">
+                                    <input type="checkbox" id="audio-recording-toggle" onchange="toggleAudioRecording(this.checked)" class="sr-only peer">
+                                    <div class="w-14 h-7 bg-slate-700 peer-focus:outline-none peer-focus:ring-2 peer-focus:ring-indigo-500 rounded-full peer peer-checked:after:translate-x-full peer-checked:after:border-white after:content-[''] after:absolute after:top-[2px] after:left-[2px] after:bg-white after:rounded-full after:h-6 after:w-6 after:transition-all peer-checked:bg-indigo-600"></div>
+                                </label>
+                            </div>
+                        </div>
+                        
+                        <!-- Recording Status -->
+                        <div id="recording-status" class="hidden space-y-2 p-4 bg-slate-800 rounded-2xl border-2 border-red-500/50">
+                            <div class="flex items-center gap-2 mb-2">
+                                <div class="w-3 h-3 bg-red-500 rounded-full animate-pulse"></div>
+                                <span class="text-red-400 text-sm font-bold">RECORDING</span>
+                            </div>
+                            <div class="text-slate-400 text-xs">
+                                <span id="recording-duration">0:00</span> • 
+                                <span id="recording-size">0 KB</span>
+                            </div>
+                        </div>
+                        
+                        <!-- Download Recording -->
+                        <button id="download-recording-btn" onclick="downloadRecording()" disabled class="w-full py-3 bg-slate-700 rounded-2xl font-bold text-sm transition-all flex items-center justify-center gap-2 disabled:opacity-50 disabled:cursor-not-allowed hover:bg-slate-600 active:scale-95">
+                            <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
+                                <path d="M21 15v4a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2v-4"></path>
+                                <polyline points="7 10 12 15 17 10"></polyline>
+                                <line x1="12" y1="15" x2="12" y2="3"></line>
+                            </svg>
+                            Download Recording
+                        </button>
+                    </div>
+                    
+                    <!-- Presets Tab -->
+                    <div id="settings-presets" class="hidden space-y-6">
+                        <h3 class="text-lg font-bold text-white mb-4">Configuration Presets</h3>
+                        
+                        <!-- Save New Preset -->
+                        <div class="space-y-2 p-4 bg-slate-800 rounded-2xl">
+                            <label class="text-indigo-400 text-sm font-bold uppercase tracking-wider">Save Current Settings</label>
+                            <div class="flex gap-2">
+                                <input type="text" id="preset-name-input" placeholder="Enter preset name..." class="flex-1 bg-slate-900 border border-white/10 rounded-xl p-3 text-white text-sm">
+                                <button onclick="savePreset()" class="px-6 py-3 bg-green-600 hover:bg-green-500 rounded-xl font-bold text-sm transition-all active:scale-95">
+                                    Save
+                                </button>
+                            </div>
+                        </div>
+                        
+                        <!-- Preset List -->
+                        <div class="space-y-2">
+                            <label class="text-indigo-400 text-sm font-bold uppercase tracking-wider">Saved Presets</label>
+                            <div id="preset-list" class="space-y-2">
+                                <div class="text-slate-400 text-sm text-center py-4">No presets saved yet</div>
+                            </div>
+                        </div>
+                        
+                        <!-- Export/Import Presets -->
+                        <div class="grid grid-cols-2 gap-3">
+                            <button onclick="exportPresets()" class="py-3 bg-slate-700 hover:bg-slate-600 rounded-xl font-bold text-sm transition-all active:scale-95">
+                                Export All
+                            </button>
+                            <button onclick="document.getElementById('import-presets-input').click()" class="py-3 bg-slate-700 hover:bg-slate-600 rounded-xl font-bold text-sm transition-all active:scale-95">
+                                Import
+                            </button>
+                        </div>
+                        <input type="file" id="import-presets-input" accept=".json" style="display:none;" onchange="importPresets(this.files[0])">
+                    </div>
                 </div>
             </div>
         </div>
@@ -2663,7 +2836,510 @@
             if (window.fb && window.fb.firebaseInitError) {
                 showTransientBanner('⚠️ ' + window.fb.firebaseInitError, 'error');
             }
+            
+            // Initialize settings modal
+            loadSettingsFromStorage();
+            loadPresetsFromStorage();
+            syncSettingsUI();
         };
+        
+        // ============================================================================
+        // Settings Modal Functions
+        // ============================================================================
+        
+        // Settings state
+        const settingsState = {
+            sleepMode: false,
+            autoSave: false,
+            maxStorySize: 500, // KB
+            audioRecording: false,
+            mediaRecorder: null,
+            recordedChunks: [],
+            recordingStartTime: null,
+            presets: {}
+        };
+        
+        function openSettingsModal() {
+            document.getElementById('settings-modal').classList.remove('hidden');
+            syncSettingsUI();
+        }
+        
+        function closeSettingsModal() {
+            document.getElementById('settings-modal').classList.add('hidden');
+        }
+        
+        function switchSettingsTab(tabName) {
+            // Hide all tabs
+            document.getElementById('settings-general').classList.add('hidden');
+            document.getElementById('settings-audio').classList.add('hidden');
+            document.getElementById('settings-presets').classList.add('hidden');
+            
+            // Remove active class from all tab buttons
+            document.getElementById('tab-general').classList.remove('bg-indigo-600', 'text-white');
+            document.getElementById('tab-general').classList.add('text-slate-400');
+            document.getElementById('tab-audio').classList.remove('bg-indigo-600', 'text-white');
+            document.getElementById('tab-audio').classList.add('text-slate-400');
+            document.getElementById('tab-presets').classList.remove('bg-indigo-600', 'text-white');
+            document.getElementById('tab-presets').classList.add('text-slate-400');
+            
+            // Show selected tab
+            document.getElementById('settings-' + tabName).classList.remove('hidden');
+            document.getElementById('tab-' + tabName).classList.add('bg-indigo-600', 'text-white');
+            document.getElementById('tab-' + tabName).classList.remove('text-slate-400');
+        }
+        
+        function syncSettingsUI() {
+            // Sync sleep mode toggle
+            document.getElementById('sleep-mode-toggle').checked = settingsState.sleepMode;
+            
+            // Show/hide session duration based on sleep mode
+            document.getElementById('session-duration-setting').style.display = 
+                settingsState.sleepMode ? 'none' : 'block';
+            
+            // Sync session duration select
+            const minutes = Math.floor(state.timeLeftSeconds / 60);
+            const lengthSelect = document.getElementById('length-select-reader');
+            if (lengthSelect) {
+                // Find closest match or set to current value
+                const options = Array.from(lengthSelect.options).map(o => parseInt(o.value));
+                const closest = options.reduce((prev, curr) => 
+                    Math.abs(curr - minutes) < Math.abs(prev - minutes) ? curr : prev
+                );
+                lengthSelect.value = closest;
+            }
+            
+            // Sync auto-save toggle
+            document.getElementById('auto-save-toggle').checked = settingsState.autoSave;
+            document.getElementById('max-story-size').value = settingsState.maxStorySize;
+            
+            // Sync audio recording toggle
+            document.getElementById('audio-recording-toggle').checked = settingsState.audioRecording;
+            
+            // Update recording status display
+            if (settingsState.audioRecording && settingsState.mediaRecorder?.state === 'recording') {
+                document.getElementById('recording-status').classList.remove('hidden');
+            } else {
+                document.getElementById('recording-status').classList.add('hidden');
+            }
+            
+            // Enable/disable download button based on recorded chunks
+            const downloadBtn = document.getElementById('download-recording-btn');
+            downloadBtn.disabled = settingsState.recordedChunks.length === 0;
+        }
+        
+        // ============================================================================
+        // Sleep Mode Functions
+        // ============================================================================
+        
+        function toggleSleepMode(enabled) {
+            settingsState.sleepMode = enabled;
+            
+            if (enabled) {
+                // Enable sleep mode - set time to very large number
+                state.timeLeftSeconds = 999999999; // ~31 years
+                document.getElementById('session-timer').textContent = '∞ SLEEP MODE';
+            } else {
+                // Disable sleep mode - restore to selected duration
+                const selectedMinutes = parseInt(document.getElementById('length-select-reader').value);
+                state.timeLeftSeconds = selectedMinutes * 60;
+            }
+            
+            syncSettingsUI();
+            saveSettingsToStorage();
+        }
+        
+        function updateSessionDuration(minutes) {
+            if (!settingsState.sleepMode) {
+                state.timeLeftSeconds = parseInt(minutes) * 60;
+                saveSettingsToStorage();
+            }
+        }
+        
+        // ============================================================================
+        // Story Saving Functions
+        // ============================================================================
+        
+        function toggleAutoSave(enabled) {
+            settingsState.autoSave = enabled;
+            
+            if (enabled) {
+                // Start auto-saving
+                autoSaveStory();
+            }
+            
+            saveSettingsToStorage();
+        }
+        
+        function autoSaveStory() {
+            if (!settingsState.autoSave) return;
+            
+            try {
+                const storyData = {
+                    title: document.getElementById('reader-title').textContent,
+                    content: state.sentences.join(' '),
+                    genre: state.genre,
+                    timestamp: Date.now()
+                };
+                
+                const storyJson = JSON.stringify(storyData);
+                const storySizeKB = new Blob([storyJson]).size / 1024;
+                
+                // Check size limit
+                if (storySizeKB <= settingsState.maxStorySize) {
+                    localStorage.setItem('dreamweaver_auto_saved_story', storyJson);
+                    console.log(`Story auto-saved (${storySizeKB.toFixed(2)} KB)`);
+                } else {
+                    console.warn(`Story exceeds size limit (${storySizeKB.toFixed(2)} KB > ${settingsState.maxStorySize} KB)`);
+                }
+            } catch (error) {
+                console.error('Failed to auto-save story:', error);
+            }
+        }
+        
+        function exportStory() {
+            try {
+                const storyData = {
+                    title: document.getElementById('reader-title').textContent,
+                    content: state.sentences.join('\n\n'),
+                    genre: state.genre,
+                    voice: state.voice,
+                    accent: state.accent,
+                    exportDate: new Date().toISOString()
+                };
+                
+                const storyText = `${storyData.title}\n\n${storyData.content}\n\n---\nGenre: ${storyData.genre}\nNarrator: ${storyData.voice} (${storyData.accent})\nExported: ${storyData.exportDate}`;
+                
+                const blob = new Blob([storyText], { type: 'text/plain' });
+                const url = URL.createObjectURL(blob);
+                const a = document.createElement('a');
+                a.href = url;
+                a.download = `dreamweaver_story_${Date.now()}.txt`;
+                document.body.appendChild(a);
+                a.click();
+                document.body.removeChild(a);
+                URL.revokeObjectURL(url);
+                
+                showTransientBanner('Story exported successfully!', 'success');
+            } catch (error) {
+                console.error('Failed to export story:', error);
+                showTransientBanner('Failed to export story: ' + error.message, 'error');
+            }
+        }
+        
+        // ============================================================================
+        // Audio Recording Functions
+        // ============================================================================
+        
+        function toggleAudioRecording(enabled) {
+            settingsState.audioRecording = enabled;
+            
+            if (enabled) {
+                startAudioRecording();
+            } else {
+                stopAudioRecording();
+            }
+            
+            syncSettingsUI();
+            saveSettingsToStorage();
+        }
+        
+        function startAudioRecording() {
+            try {
+                // Create a MediaStreamDestination to capture audio
+                const audioContext = new (window.AudioContext || window.webkitAudioContext)();
+                const destination = audioContext.createMediaStreamDestination();
+                
+                // Connect current audio to destination
+                const source = audioContext.createMediaElementSource(state.currentAudio);
+                source.connect(destination);
+                source.connect(audioContext.destination); // Also play normally
+                
+                // Create MediaRecorder
+                settingsState.mediaRecorder = new MediaRecorder(destination.stream);
+                settingsState.recordedChunks = [];
+                settingsState.recordingStartTime = Date.now();
+                
+                settingsState.mediaRecorder.ondataavailable = (event) => {
+                    if (event.data.size > 0) {
+                        settingsState.recordedChunks.push(event.data);
+                        updateRecordingStatus();
+                    }
+                };
+                
+                settingsState.mediaRecorder.start(1000); // Capture in 1-second chunks
+                
+                console.log('Audio recording started');
+                syncSettingsUI();
+            } catch (error) {
+                console.error('Failed to start audio recording:', error);
+                showTransientBanner('Failed to start recording: ' + error.message, 'error');
+                settingsState.audioRecording = false;
+                document.getElementById('audio-recording-toggle').checked = false;
+            }
+        }
+        
+        function stopAudioRecording() {
+            if (settingsState.mediaRecorder && settingsState.mediaRecorder.state !== 'inactive') {
+                settingsState.mediaRecorder.stop();
+                console.log('Audio recording stopped');
+            }
+            syncSettingsUI();
+        }
+        
+        function updateRecordingStatus() {
+            if (!settingsState.recordingStartTime) return;
+            
+            const duration = Math.floor((Date.now() - settingsState.recordingStartTime) / 1000);
+            const minutes = Math.floor(duration / 60);
+            const seconds = duration % 60;
+            
+            const totalSize = settingsState.recordedChunks.reduce((acc, chunk) => acc + chunk.size, 0);
+            const sizeKB = (totalSize / 1024).toFixed(2);
+            
+            document.getElementById('recording-duration').textContent = 
+                `${minutes}:${seconds.toString().padStart(2, '0')}`;
+            document.getElementById('recording-size').textContent = `${sizeKB} KB`;
+        }
+        
+        function downloadRecording() {
+            if (settingsState.recordedChunks.length === 0) {
+                showTransientBanner('No recording available to download', 'warning');
+                return;
+            }
+            
+            try {
+                const blob = new Blob(settingsState.recordedChunks, { type: 'audio/webm' });
+                const url = URL.createObjectURL(blob);
+                const a = document.createElement('a');
+                a.href = url;
+                a.download = `dreamweaver_recording_${Date.now()}.webm`;
+                document.body.appendChild(a);
+                a.click();
+                document.body.removeChild(a);
+                URL.revokeObjectURL(url);
+                
+                showTransientBanner('Recording downloaded successfully!', 'success');
+            } catch (error) {
+                console.error('Failed to download recording:', error);
+                showTransientBanner('Failed to download recording: ' + error.message, 'error');
+            }
+        }
+        
+        // ============================================================================
+        // Preset Management Functions
+        // ============================================================================
+        
+        function savePreset() {
+            const presetName = document.getElementById('preset-name-input').value.trim();
+            
+            if (!presetName) {
+                showTransientBanner('Please enter a preset name', 'warning');
+                return;
+            }
+            
+            const preset = {
+                name: presetName,
+                voice: document.getElementById('voice-select-reader').value,
+                genre: state.genre,
+                sessionDuration: parseInt(document.getElementById('length-select-reader').value),
+                sleepMode: settingsState.sleepMode,
+                scoreDynamics: parseInt(document.getElementById('score-sensitivity')?.value || 3),
+                musicSource: state.musicSource,
+                autoSave: settingsState.autoSave,
+                maxStorySize: settingsState.maxStorySize,
+                timestamp: Date.now()
+            };
+            
+            settingsState.presets[presetName] = preset;
+            savePresetsToStorage();
+            renderPresetList();
+            
+            document.getElementById('preset-name-input').value = '';
+            showTransientBanner(`Preset "${presetName}" saved!`, 'success');
+        }
+        
+        function loadPreset(presetName) {
+            const preset = settingsState.presets[presetName];
+            if (!preset) return;
+            
+            // Apply preset settings
+            document.getElementById('voice-select').value = preset.voice;
+            document.getElementById('voice-select-reader').value = preset.voice;
+            
+            const voiceConfig = VOICES[preset.voice];
+            if (voiceConfig) {
+                state.voice = voiceConfig.name;
+                state.accent = voiceConfig.accent;
+            }
+            
+            state.genre = preset.genre;
+            
+            if (preset.sleepMode) {
+                settingsState.sleepMode = true;
+                state.timeLeftSeconds = 999999999;
+            } else {
+                settingsState.sleepMode = false;
+                state.timeLeftSeconds = preset.sessionDuration * 60;
+                document.getElementById('length-select-reader').value = preset.sessionDuration;
+            }
+            
+            if (document.getElementById('score-sensitivity')) {
+                document.getElementById('score-sensitivity').value = preset.scoreDynamics;
+            }
+            
+            state.musicSource = preset.musicSource;
+            settingsState.autoSave = preset.autoSave;
+            settingsState.maxStorySize = preset.maxStorySize;
+            
+            syncSettingsUI();
+            showTransientBanner(`Preset "${presetName}" loaded!`, 'success');
+        }
+        
+        function deletePreset(presetName) {
+            if (!confirm(`Delete preset "${presetName}"?`)) return;
+            
+            delete settingsState.presets[presetName];
+            savePresetsToStorage();
+            renderPresetList();
+            
+            showTransientBanner(`Preset "${presetName}" deleted`, 'success');
+        }
+        
+        function renderPresetList() {
+            const presetList = document.getElementById('preset-list');
+            const presets = Object.values(settingsState.presets);
+            
+            if (presets.length === 0) {
+                presetList.innerHTML = '<div class="text-slate-400 text-sm text-center py-4">No presets saved yet</div>';
+                return;
+            }
+            
+            presetList.innerHTML = presets.map(preset => `
+                <div class="flex items-center justify-between p-3 bg-slate-800 rounded-xl">
+                    <div class="flex-1">
+                        <div class="text-white font-bold text-sm">${preset.name}</div>
+                        <div class="text-slate-400 text-xs mt-1">
+                            ${preset.voice} • ${preset.genre} • ${preset.sleepMode ? 'Sleep Mode' : preset.sessionDuration + ' min'}
+                        </div>
+                    </div>
+                    <div class="flex gap-2">
+                        <button onclick="loadPreset('${preset.name}')" class="px-3 py-1 bg-indigo-600 hover:bg-indigo-500 rounded-lg text-xs font-bold transition-all active:scale-95">
+                            Load
+                        </button>
+                        <button onclick="deletePreset('${preset.name}')" class="px-3 py-1 bg-red-600 hover:bg-red-500 rounded-lg text-xs font-bold transition-all active:scale-95">
+                            Delete
+                        </button>
+                    </div>
+                </div>
+            `).join('');
+        }
+        
+        function exportPresets() {
+            try {
+                const presetsJson = JSON.stringify(settingsState.presets, null, 2);
+                const blob = new Blob([presetsJson], { type: 'application/json' });
+                const url = URL.createObjectURL(blob);
+                const a = document.createElement('a');
+                a.href = url;
+                a.download = `dreamweaver_presets_${Date.now()}.json`;
+                document.body.appendChild(a);
+                a.click();
+                document.body.removeChild(a);
+                URL.revokeObjectURL(url);
+                
+                showTransientBanner('Presets exported successfully!', 'success');
+            } catch (error) {
+                console.error('Failed to export presets:', error);
+                showTransientBanner('Failed to export presets: ' + error.message, 'error');
+            }
+        }
+        
+        function importPresets(file) {
+            if (!file) return;
+            
+            const reader = new FileReader();
+            reader.onload = (e) => {
+                try {
+                    const imported = JSON.parse(e.target.result);
+                    
+                    // Merge imported presets with existing ones
+                    settingsState.presets = { ...settingsState.presets, ...imported };
+                    savePresetsToStorage();
+                    renderPresetList();
+                    
+                    const count = Object.keys(imported).length;
+                    showTransientBanner(`Imported ${count} preset(s) successfully!`, 'success');
+                } catch (error) {
+                    console.error('Failed to import presets:', error);
+                    showTransientBanner('Failed to import presets: Invalid file format', 'error');
+                }
+            };
+            reader.readAsText(file);
+        }
+        
+        // ============================================================================
+        // Storage Functions
+        // ============================================================================
+        
+        function saveSettingsToStorage() {
+            try {
+                localStorage.setItem('dreamweaver_settings', JSON.stringify({
+                    sleepMode: settingsState.sleepMode,
+                    autoSave: settingsState.autoSave,
+                    maxStorySize: settingsState.maxStorySize,
+                    audioRecording: settingsState.audioRecording
+                }));
+            } catch (error) {
+                console.warn('Failed to save settings to storage:', error);
+            }
+        }
+        
+        function loadSettingsFromStorage() {
+            try {
+                const stored = localStorage.getItem('dreamweaver_settings');
+                if (stored) {
+                    const settings = JSON.parse(stored);
+                    settingsState.sleepMode = settings.sleepMode || false;
+                    settingsState.autoSave = settings.autoSave || false;
+                    settingsState.maxStorySize = settings.maxStorySize || 500;
+                    settingsState.audioRecording = settings.audioRecording || false;
+                }
+            } catch (error) {
+                console.warn('Failed to load settings from storage:', error);
+            }
+        }
+        
+        function savePresetsToStorage() {
+            try {
+                localStorage.setItem('dreamweaver_presets', JSON.stringify(settingsState.presets));
+            } catch (error) {
+                console.warn('Failed to save presets to storage:', error);
+            }
+        }
+        
+        function loadPresetsFromStorage() {
+            try {
+                const stored = localStorage.getItem('dreamweaver_presets');
+                if (stored) {
+                    settingsState.presets = JSON.parse(stored);
+                    renderPresetList();
+                }
+            } catch (error) {
+                console.warn('Failed to load presets from storage:', error);
+            }
+        }
+        
+        // Update auto-save periodically during playback
+        setInterval(() => {
+            if (state.isPlaying && settingsState.autoSave) {
+                autoSaveStory();
+            }
+            
+            // Update recording status if recording
+            if (settingsState.audioRecording && settingsState.mediaRecorder?.state === 'recording') {
+                updateRecordingStatus();
+            }
+        }, 5000); // Every 5 seconds
     </script>
     
     <!-- Music Player Module -->
