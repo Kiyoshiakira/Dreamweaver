@@ -1177,7 +1177,9 @@
             currentSpotifyTrack: null,
             availableSpotifyTracks: [],
             // Music source selection: tracks currently selected music source for synchronization
-            musicSource: 'spotify'
+            musicSource: 'spotify',
+            // Demo mode: tracks when running in fallback mode without API access
+            isDemoMode: false
         };
 
         // Spotify Authentication Functions
@@ -1710,6 +1712,9 @@
                 // Populate state with fallback chapter
                 appendChapter(fallbackChapter);
                 
+                // Set demo mode flag to indicate limited functionality
+                state.isDemoMode = true;
+                
                 // Apply appropriate music score
                 applyScore(fallbackChapter.score_type);
                 
@@ -1778,14 +1783,17 @@
                 }
                 
                 errorMessage += 'A demo chapter has been loaded so you can explore the music player and visuals.\n';
-                errorMessage += 'Fix the configuration issues to enable full story generation with AI narration and images.';
+                errorMessage += 'In demo mode, the story text is displayed but AI narration and image generation are unavailable.\n';
+                errorMessage += 'Fix the API configuration to enable full story generation with AI narration and images.';
                 
                 // Show error message using non-intrusive banner instead of blocking alert
                 // Convert newlines to HTML breaks for proper display
                 showTransientBanner(errorMessage.replace(/\n/g, '<br>'), 'warning');
                 
                 // Also log friendly message to console
-                console.log('Fallback demo chapter loaded. Music and TTS controls are available.');
+                console.log('Fallback demo chapter loaded.');
+                console.log('Demo mode: Music playback and text display are available.');
+                console.log('Demo mode: AI narration and image generation are disabled.');
                 console.log('Error details:', error.message || error);
             }
         }
@@ -1890,43 +1898,66 @@
                 return;
             }
 
-            // Calculate how many sentences are left in current chapter
-            const sentencesLeftInChapter = state.sentences.length - state.currentIndex;
-            const sentencesInCurrentChapter = state.sentences.length - state.chapterStartIndex;
-            
-            // Trigger next chapter generation when halfway through current chapter
-            // This allows AI to write while reading
-            // Only trigger once per chapter to avoid duplicate generation requests
-            // Require at least 2 sentences in chapter to avoid edge cases with very short chapters
-            if (!state.nextChapterTriggered && 
-                sentencesInCurrentChapter >= 2 && 
-                sentencesLeftInChapter > 0 &&
-                sentencesLeftInChapter <= Math.floor(sentencesInCurrentChapter / 2)) {
-                if (shouldGenerateNextChapter()) {
-                    state.nextChapterTriggered = true;
-                    // Generate in parallel without awaiting, so reading continues
-                    generateNextChapter("Continue the narrative smoothly.").catch(err => {
-                        console.error('Failed to generate next chapter in background:', err);
-                        console.error('Context: Chapter generation failed mid-reading. System will retry when current chapter completes.');
-                        // Note: If generation fails, the system will retry when playCycle reaches end of current chapter
-                        // Reset flag after a delay to avoid rapid retries
-                        setTimeout(() => { state.nextChapterTriggered = false; }, state.retryDelayMs);
-                    });
+            // In demo mode, skip chapter generation and image generation
+            if (!state.isDemoMode) {
+                // Calculate how many sentences are left in current chapter
+                const sentencesLeftInChapter = state.sentences.length - state.currentIndex;
+                const sentencesInCurrentChapter = state.sentences.length - state.chapterStartIndex;
+                
+                // Trigger next chapter generation when halfway through current chapter
+                // This allows AI to write while reading
+                // Only trigger once per chapter to avoid duplicate generation requests
+                // Require at least 2 sentences in chapter to avoid edge cases with very short chapters
+                if (!state.nextChapterTriggered && 
+                    sentencesInCurrentChapter >= 2 && 
+                    sentencesLeftInChapter > 0 &&
+                    sentencesLeftInChapter <= Math.floor(sentencesInCurrentChapter / 2)) {
+                    if (shouldGenerateNextChapter()) {
+                        state.nextChapterTriggered = true;
+                        // Generate in parallel without awaiting, so reading continues
+                        generateNextChapter("Continue the narrative smoothly.").catch(err => {
+                            console.error('Failed to generate next chapter in background:', err);
+                            console.error('Context: Chapter generation failed mid-reading. System will retry when current chapter completes.');
+                            // Note: If generation fails, the system will retry when playCycle reaches end of current chapter
+                            // Reset flag after a delay to avoid rapid retries
+                            setTimeout(() => { state.nextChapterTriggered = false; }, state.retryDelayMs);
+                        });
+                    }
+                }
+
+                // Trigger visual every 4 sentences - use cached images if available
+                // Check if current index aligns with image generation points (every 4 sentences from chapter start)
+                const sentencesIntoChapter = state.currentIndex - state.chapterStartIndex;
+                if (sentencesIntoChapter >= 0 && sentencesIntoChapter % 4 === 0) {
+                    if (state.imageCache.has(state.currentIndex)) {
+                        displayCachedImage(state.currentIndex);
+                    } else {
+                        // Fallback: generate on-the-fly if not cached
+                        updateVisual(state.currentIndex).catch(err => console.error('Visual generation error:', err));
+                    }
                 }
             }
 
-            // Trigger visual every 4 sentences - use cached images if available
-            // Check if current index aligns with image generation points (every 4 sentences from chapter start)
-            const sentencesIntoChapter = state.currentIndex - state.chapterStartIndex;
-            if (sentencesIntoChapter >= 0 && sentencesIntoChapter % 4 === 0) {
-                if (state.imageCache.has(state.currentIndex)) {
-                    displayCachedImage(state.currentIndex);
-                } else {
-                    // Fallback: generate on-the-fly if not cached
-                    updateVisual(state.currentIndex).catch(err => console.error('Visual generation error:', err));
-                }
+            // Demo mode: Display text with highlighting but without TTS narration
+            if (state.isDemoMode) {
+                // Highlight current sentence
+                highlight(state.currentIndex);
+                
+                // Use a fixed duration per sentence for demo mode (5 seconds for comfortable reading)
+                const demoDurationMs = 5000;
+                
+                // Move to next sentence after delay
+                setTimeout(() => {
+                    if (state.isPlaying) {
+                        state.currentIndex++;
+                        playCycle().catch(err => console.error('Playback cycle error:', err));
+                    }
+                }, demoDurationMs);
+                
+                return;
             }
 
+            // Normal mode with TTS narration
             let blob = state.audioBuffer.get(state.currentIndex);
             if (!blob) blob = await fetchTTS(state.sentences[state.currentIndex]);
 
@@ -1966,6 +1997,9 @@
         }
         
         function shouldGenerateNextChapter() {
+            // Don't generate in demo mode
+            if (state.isDemoMode) return false;
+            
             // Don't generate if already generating
             if (state.isGeneratingChapter) return false;
             
