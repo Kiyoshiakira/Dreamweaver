@@ -1,0 +1,909 @@
+<!DOCTYPE html>
+<!--
+    Dreamweaver Debug & Testing Area
+    
+    ⚠️ IMPORTANT SECURITY NOTICE FOR PRODUCTION DEPLOYMENT:
+    
+    This debug interface is configured for development/demo purposes.
+    Before deploying to production, you MUST:
+    
+    1. Update Firebase configuration (search for "TODO: Replace these placeholder values")
+    2. Update reCAPTCHA site key (search for "TODO: Replace with your actual")
+    3. REMOVE demo access grants that bypass role checking:
+       - Search for "DEVELOPMENT ONLY" comments and remove the grantAccess() calls
+    4. Deploy Firestore rules with proper role-based access control
+    5. Set up user roles in Firestore for authorized users
+    
+    Failure to do so will allow unauthorized access to debug features.
+    See DEBUG_SETUP.md for detailed production setup instructions.
+-->
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <meta http-equiv="Content-Security-Policy" content="
+        default-src 'self';
+        script-src 'self' 'unsafe-inline' 'unsafe-eval' 
+            https://www.gstatic.com 
+            https://www.google.com 
+            https://www.google.com/recaptcha/ 
+            https://www.gstatic.com/recaptcha/;
+        style-src 'self' 'unsafe-inline';
+        font-src 'self';
+        img-src 'self' data: https: blob:;
+        connect-src 'self' 
+            https://firebasestorage.googleapis.com 
+            https://*.googleapis.com
+            https://generativelanguage.googleapis.com
+            https://texttospeech.googleapis.com
+            https://www.gstatic.com
+            https://www.google.com;
+        frame-src https://www.google.com https://recaptcha.google.com https://www.google.com/recaptcha/;
+    ">
+    <title>Dreamweaver Debug & Testing Area</title>
+    <style>
+        * {
+            margin: 0;
+            padding: 0;
+            box-sizing: border-box;
+        }
+        
+        body {
+            font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, Oxygen, Ubuntu, Cantarell, sans-serif;
+            background: linear-gradient(135deg, #0f172a 0%, #1e293b 100%);
+            color: #e2e8f0;
+            line-height: 1.6;
+            min-height: 100vh;
+            padding: 20px;
+        }
+        
+        .container {
+            max-width: 1400px;
+            margin: 0 auto;
+        }
+        
+        header {
+            background: linear-gradient(135deg, #1e293b 0%, #334155 100%);
+            border-radius: 12px;
+            padding: 24px;
+            margin-bottom: 24px;
+            box-shadow: 0 4px 6px rgba(0, 0, 0, 0.3);
+        }
+        
+        h1 {
+            font-size: 2rem;
+            font-weight: 800;
+            color: #818cf8;
+            margin-bottom: 8px;
+        }
+        
+        .subtitle {
+            color: #94a3b8;
+            font-size: 0.9rem;
+        }
+        
+        .auth-section {
+            background: #1e293b;
+            border: 2px solid #dc2626;
+            border-radius: 12px;
+            padding: 20px;
+            margin-bottom: 24px;
+        }
+        
+        .auth-section.authorized {
+            border-color: #16a34a;
+        }
+        
+        .status {
+            display: inline-block;
+            padding: 4px 12px;
+            border-radius: 6px;
+            font-size: 0.85rem;
+            font-weight: 600;
+            margin-top: 8px;
+        }
+        
+        .status.unauthorized {
+            background: #dc2626;
+            color: white;
+        }
+        
+        .status.authorized {
+            background: #16a34a;
+            color: white;
+        }
+        
+        .grid {
+            display: grid;
+            grid-template-columns: repeat(auto-fit, minmax(400px, 1fr));
+            gap: 20px;
+            margin-bottom: 24px;
+        }
+        
+        .panel {
+            background: #1e293b;
+            border: 1px solid #334155;
+            border-radius: 12px;
+            padding: 20px;
+            box-shadow: 0 2px 4px rgba(0, 0, 0, 0.2);
+        }
+        
+        .panel h2 {
+            font-size: 1.25rem;
+            color: #818cf8;
+            margin-bottom: 16px;
+            display: flex;
+            align-items: center;
+            gap: 8px;
+        }
+        
+        .panel h3 {
+            font-size: 1rem;
+            color: #a5b4fc;
+            margin: 16px 0 8px 0;
+        }
+        
+        .form-group {
+            margin-bottom: 16px;
+        }
+        
+        label {
+            display: block;
+            color: #94a3b8;
+            font-size: 0.85rem;
+            font-weight: 600;
+            margin-bottom: 6px;
+            text-transform: uppercase;
+            letter-spacing: 0.5px;
+        }
+        
+        input[type="text"],
+        input[type="email"],
+        textarea,
+        select {
+            width: 100%;
+            padding: 10px 12px;
+            background: #0f172a;
+            border: 1px solid #334155;
+            border-radius: 8px;
+            color: #e2e8f0;
+            font-size: 0.9rem;
+            transition: border-color 0.2s;
+        }
+        
+        input:focus,
+        textarea:focus,
+        select:focus {
+            outline: none;
+            border-color: #818cf8;
+        }
+        
+        textarea {
+            min-height: 100px;
+            resize: vertical;
+            font-family: 'Courier New', monospace;
+        }
+        
+        button {
+            background: #6366f1;
+            color: white;
+            border: none;
+            padding: 10px 20px;
+            border-radius: 8px;
+            font-size: 0.9rem;
+            font-weight: 600;
+            cursor: pointer;
+            transition: all 0.2s;
+        }
+        
+        button:hover {
+            background: #818cf8;
+            transform: translateY(-1px);
+        }
+        
+        button:active {
+            transform: translateY(0);
+        }
+        
+        button:disabled {
+            background: #334155;
+            cursor: not-allowed;
+            transform: none;
+        }
+        
+        .btn-secondary {
+            background: #334155;
+        }
+        
+        .btn-secondary:hover {
+            background: #475569;
+        }
+        
+        .btn-danger {
+            background: #dc2626;
+        }
+        
+        .btn-danger:hover {
+            background: #ef4444;
+        }
+        
+        .output {
+            background: #0f172a;
+            border: 1px solid #334155;
+            border-radius: 8px;
+            padding: 12px;
+            font-family: 'Courier New', monospace;
+            font-size: 0.85rem;
+            max-height: 300px;
+            overflow-y: auto;
+            white-space: pre-wrap;
+            word-break: break-all;
+        }
+        
+        .output.error {
+            border-color: #dc2626;
+            color: #fca5a5;
+        }
+        
+        .output.success {
+            border-color: #16a34a;
+            color: #86efac;
+        }
+        
+        .metric {
+            display: flex;
+            justify-content: space-between;
+            padding: 8px 12px;
+            background: #0f172a;
+            border-radius: 6px;
+            margin-bottom: 8px;
+        }
+        
+        .metric-label {
+            color: #94a3b8;
+            font-size: 0.85rem;
+        }
+        
+        .metric-value {
+            color: #818cf8;
+            font-weight: 600;
+            font-size: 0.9rem;
+        }
+        
+        .log-entry {
+            padding: 8px 12px;
+            border-left: 3px solid #334155;
+            margin-bottom: 8px;
+            background: #0f172a;
+            border-radius: 4px;
+            font-size: 0.85rem;
+        }
+        
+        .log-entry.info {
+            border-left-color: #3b82f6;
+        }
+        
+        .log-entry.success {
+            border-left-color: #16a34a;
+        }
+        
+        .log-entry.error {
+            border-left-color: #dc2626;
+        }
+        
+        .log-entry .timestamp {
+            color: #64748b;
+            font-size: 0.75rem;
+            margin-right: 8px;
+        }
+        
+        .icon {
+            width: 20px;
+            height: 20px;
+        }
+        
+        .toggle-section {
+            display: flex;
+            align-items: center;
+            gap: 12px;
+            margin-bottom: 16px;
+        }
+        
+        .toggle {
+            position: relative;
+            width: 48px;
+            height: 24px;
+            background: #334155;
+            border-radius: 12px;
+            cursor: pointer;
+            transition: background 0.2s;
+        }
+        
+        .toggle.active {
+            background: #16a34a;
+        }
+        
+        .toggle::after {
+            content: '';
+            position: absolute;
+            width: 20px;
+            height: 20px;
+            background: white;
+            border-radius: 50%;
+            top: 2px;
+            left: 2px;
+            transition: transform 0.2s;
+        }
+        
+        .toggle.active::after {
+            transform: translateX(24px);
+        }
+        
+        #loading {
+            display: none;
+            text-align: center;
+            padding: 20px;
+        }
+        
+        .spinner {
+            border: 3px solid #334155;
+            border-top: 3px solid #818cf8;
+            border-radius: 50%;
+            width: 40px;
+            height: 40px;
+            animation: spin 1s linear infinite;
+            margin: 0 auto;
+        }
+        
+        @keyframes spin {
+            0% { transform: rotate(0deg); }
+            100% { transform: rotate(360deg); }
+        }
+        
+        .hidden {
+            display: none;
+        }
+        
+        .image-preview {
+            max-width: 100%;
+            border-radius: 8px;
+            margin-top: 12px;
+        }
+        
+        .audio-player {
+            width: 100%;
+            margin-top: 12px;
+        }
+    </style>
+</head>
+<body>
+    <div class="container">
+        <header>
+            <h1>🔧 Dreamweaver Debug & Testing Area</h1>
+            <p class="subtitle">Test AI functionality, inspect API calls, and debug configurations</p>
+        </header>
+        
+        <!-- Authentication & Authorization -->
+        <div id="auth-section" class="auth-section">
+            <h2>🔐 Access Control</h2>
+            <p id="auth-status">Checking authorization...</p>
+            <div id="auth-info"></div>
+        </div>
+        
+        <div id="debug-content" class="hidden">
+            <!-- Configuration Status -->
+            <div class="panel">
+                <h2>⚙️ Configuration Status</h2>
+                <div id="config-status">
+                    <div class="metric">
+                        <span class="metric-label">Firebase Initialized</span>
+                        <span class="metric-value" id="firebase-status">❌</span>
+                    </div>
+                    <div class="metric">
+                        <span class="metric-label">App Check Active</span>
+                        <span class="metric-value" id="appcheck-status">❌</span>
+                    </div>
+                    <div class="metric">
+                        <span class="metric-label">Authentication</span>
+                        <span class="metric-value" id="auth-method">None</span>
+                    </div>
+                    <div class="metric">
+                        <span class="metric-label">User Role</span>
+                        <span class="metric-value" id="user-role">Unknown</span>
+                    </div>
+                </div>
+            </div>
+            
+            <div class="grid">
+                <!-- Story Generation Tester -->
+                <div class="panel">
+                    <h2>📖 Story Generation Test</h2>
+                    <div class="form-group">
+                        <label>Story Prompt</label>
+                        <textarea id="story-prompt" placeholder="Enter a story prompt to test...">A wizard discovers a mysterious ancient book in a hidden library.</textarea>
+                    </div>
+                    <div class="form-group">
+                        <label>System Instruction (Optional)</label>
+                        <textarea id="story-system" placeholder="System instruction...">You are a creative storyteller. Generate engaging narratives.</textarea>
+                    </div>
+                    <button onclick="testStoryGeneration()">Generate Story</button>
+                    <button class="btn-secondary" onclick="clearOutput('story-output')">Clear</button>
+                    <h3>Response:</h3>
+                    <div id="story-output" class="output">Output will appear here...</div>
+                    <div id="story-metrics"></div>
+                </div>
+                
+                <!-- TTS Tester -->
+                <div class="panel">
+                    <h2>🎙️ Text-to-Speech Test</h2>
+                    <div class="form-group">
+                        <label>Text to Speak</label>
+                        <textarea id="tts-text" placeholder="Enter text to convert to speech...">Hello, this is a test of the text to speech system.</textarea>
+                    </div>
+                    <div class="form-group">
+                        <label>Voice</label>
+                        <select id="tts-voice">
+                            <option value="Kore">Kore</option>
+                            <option value="Zephyr">Zephyr</option>
+                            <option value="Puck">Puck</option>
+                            <option value="Charon">Charon</option>
+                        </select>
+                    </div>
+                    <div class="form-group">
+                        <label>Accent</label>
+                        <select id="tts-accent">
+                            <option value="American">American</option>
+                            <option value="British">British</option>
+                            <option value="Australian">Australian</option>
+                            <option value="Indian">Indian</option>
+                        </select>
+                    </div>
+                    <button onclick="testTTS()">Generate Speech</button>
+                    <button class="btn-secondary" onclick="clearOutput('tts-output')">Clear</button>
+                    <h3>Response:</h3>
+                    <div id="tts-output" class="output">Output will appear here...</div>
+                    <audio id="tts-audio" class="audio-player hidden" controls></audio>
+                    <div id="tts-metrics"></div>
+                </div>
+                
+                <!-- Image Generation Tester -->
+                <div class="panel">
+                    <h2>🎨 Image Generation Test</h2>
+                    <div class="form-group">
+                        <label>Image Prompt</label>
+                        <textarea id="image-prompt" placeholder="Describe the image to generate...">A mystical wizard standing in an ancient library filled with glowing magical books.</textarea>
+                    </div>
+                    <button onclick="testImageGeneration()">Generate Image</button>
+                    <button class="btn-secondary" onclick="clearOutput('image-output')">Clear</button>
+                    <h3>Response:</h3>
+                    <div id="image-output" class="output">Output will appear here...</div>
+                    <img id="image-preview" class="image-preview hidden" alt="Generated image">
+                    <div id="image-metrics"></div>
+                </div>
+                
+                <!-- Request Inspector -->
+                <div class="panel">
+                    <h2>🔍 Request Inspector</h2>
+                    <div class="toggle-section">
+                        <label style="text-transform: none; color: #e2e8f0; margin: 0;">Log All Requests</label>
+                        <div class="toggle" id="log-toggle" onclick="toggleLogging()"></div>
+                    </div>
+                    <h3>Recent Requests:</h3>
+                    <div id="request-log" class="output" style="max-height: 400px;">
+                        No requests logged yet...
+                    </div>
+                    <button class="btn-secondary" onclick="clearRequestLog()">Clear Log</button>
+                    <button class="btn-secondary" onclick="exportLog()">Export Log</button>
+                </div>
+            </div>
+            
+            <!-- Debug Console -->
+            <div class="panel">
+                <h2>🐛 Debug Console</h2>
+                <div class="toggle-section">
+                    <label style="text-transform: none; color: #e2e8f0; margin: 0;">Verbose Logging</label>
+                    <div class="toggle active" id="verbose-toggle" onclick="toggleVerbose()"></div>
+                </div>
+                <div id="console-log" class="output" style="max-height: 300px;">
+                    <div class="log-entry info">
+                        <span class="timestamp">[00:00:00]</span>
+                        <span>Debug console initialized</span>
+                    </div>
+                </div>
+                <button class="btn-secondary" onclick="clearConsole()">Clear Console</button>
+                <button class="btn-danger" onclick="testError()">Test Error</button>
+            </div>
+        </div>
+        
+        <div id="loading" class="hidden">
+            <div class="spinner"></div>
+            <p style="margin-top: 12px;">Loading...</p>
+        </div>
+    </div>
+    
+    <script type="module">
+        import { initializeApp } from "https://www.gstatic.com/firebasejs/11.6.1/firebase-app.js";
+        import { getAuth, signInAnonymously, onAuthStateChanged } from "https://www.gstatic.com/firebasejs/11.6.1/firebase-auth.js";
+        import { getFirestore, doc, getDoc } from "https://www.gstatic.com/firebasejs/11.6.1/firebase-firestore.js";
+        import { initializeAppCheck, ReCaptchaV3Provider } from "https://www.gstatic.com/firebasejs/11.6.1/firebase-app-check.js";
+        
+        // CONFIGURATION - Must match main app configuration
+        // TODO: Replace these placeholder values with your actual Firebase configuration
+        // Get your config from: Firebase Console > Project Settings > Your apps
+        // For production deployment, consider using environment variables or server-side config
+        const __firebase_config = JSON.stringify({
+            apiKey: "YOUR_FIREBASE_API_KEY",
+            authDomain: "your-project.firebaseapp.com",
+            projectId: "your-project-id",
+            storageBucket: "your-project.firebasestorage.app",
+            messagingSenderId: "YOUR_MESSAGING_SENDER_ID",
+            appId: "YOUR_APP_ID",
+            measurementId: "YOUR_MEASUREMENT_ID"
+        });
+        
+        // TODO: Replace with your actual reCAPTCHA v3 site key
+        // Get from: https://www.google.com/recaptcha/admin
+        const __recaptcha_site_key = "YOUR_RECAPTCHA_V3_SITE_KEY";
+        
+        let auth = null;
+        let db = null;
+        let appCheck = null;
+        let userRole = null;
+        let loggingEnabled = true;
+        let verboseMode = true;
+        let requestLog = [];
+        
+        // Initialize Firebase
+        try {
+            const firebaseConfig = JSON.parse(__firebase_config);
+            
+            if (firebaseConfig.apiKey === 'YOUR_FIREBASE_API_KEY') {
+                showError('Firebase not configured. Please update the configuration in this file.');
+            } else {
+                const app = initializeApp(firebaseConfig);
+                auth = getAuth(app);
+                db = getFirestore(app);
+                
+                if (__recaptcha_site_key && __recaptcha_site_key !== 'YOUR_RECAPTCHA_V3_SITE_KEY') {
+                    appCheck = initializeAppCheck(app, {
+                        provider: new ReCaptchaV3Provider(__recaptcha_site_key),
+                        isTokenAutoRefreshEnabled: true
+                    });
+                    updateConfigStatus('appcheck-status', '✅');
+                    logConsole('App Check initialized', 'success');
+                }
+                
+                updateConfigStatus('firebase-status', '✅');
+                logConsole('Firebase initialized successfully', 'success');
+                
+                // Sign in and check authorization
+                await initializeAuth();
+            }
+        } catch (error) {
+            showError('Firebase initialization failed: ' + error.message);
+            logConsole('Firebase initialization error: ' + error.message, 'error');
+        }
+        
+        async function initializeAuth() {
+            try {
+                // Sign in anonymously
+                await signInAnonymously(auth);
+                
+                onAuthStateChanged(auth, async (user) => {
+                    if (user) {
+                        updateConfigStatus('auth-method', 'Anonymous');
+                        logConsole('User authenticated: ' + user.uid, 'success');
+                        
+                        // Check user role in Firestore
+                        await checkUserRole(user.uid);
+                    } else {
+                        showError('Authentication failed');
+                        logConsole('Authentication failed', 'error');
+                    }
+                });
+            } catch (error) {
+                showError('Authentication error: ' + error.message);
+                logConsole('Authentication error: ' + error.message, 'error');
+            }
+        }
+        
+        async function checkUserRole(uid) {
+            try {
+                // Check for user role in Firestore
+                const userDoc = await getDoc(doc(db, 'users', uid));
+                
+                if (userDoc.exists()) {
+                    const userData = userDoc.data();
+                    userRole = userData.role || 'user';
+                } else {
+                    // Default to checking email-based roles
+                    userRole = 'unauthorized';
+                }
+                
+                updateConfigStatus('user-role', userRole);
+                
+                // Check user role and grant access if authorized
+                if (userRole === 'developer' || userRole === 'tester' || userRole === 'admin') {
+                    grantAccess();
+                } else {
+                    // DEVELOPMENT ONLY: Remove this block in production!
+                    // This grants access for demo/testing purposes when Firebase is configured
+                    // In production, only users with proper roles should have access
+                    logConsole('⚠️ DEMO MODE: Granting access without proper role. Remove this in production!', 'info');
+                    grantAccess();
+                }
+            } catch (error) {
+                // DEVELOPMENT ONLY: Remove this block in production!
+                // This grants access even on error for demo/testing purposes
+                // In production, errors should deny access
+                logConsole('Role check error: ' + error.message + ' - Granting access for demo/testing', 'info');
+                grantAccess();
+            }
+        }
+        
+        function grantAccess() {
+            document.getElementById('auth-section').classList.add('authorized');
+            document.getElementById('auth-status').innerHTML = '<span class="status authorized">✅ Access Granted</span>';
+            document.getElementById('auth-info').innerHTML = '<p style="margin-top: 12px; font-size: 0.85rem;">You have access to the testing area.</p>';
+            document.getElementById('debug-content').classList.remove('hidden');
+            logConsole('Access granted to debug area', 'success');
+        }
+        
+        function showError(message) {
+            document.getElementById('auth-status').innerHTML = '<span class="status unauthorized">❌ Access Denied</span>';
+            document.getElementById('auth-info').innerHTML = `<p style="margin-top: 12px; font-size: 0.85rem; color: #fca5a5;">${message}</p>`;
+        }
+        
+        function updateConfigStatus(elementId, value) {
+            document.getElementById(elementId).textContent = value;
+        }
+        
+        function logConsole(message, type = 'info') {
+            if (!verboseMode && type === 'info') return;
+            
+            const consoleLog = document.getElementById('console-log');
+            const timestamp = new Date().toLocaleTimeString();
+            const entry = document.createElement('div');
+            entry.className = `log-entry ${type}`;
+            entry.innerHTML = `<span class="timestamp">[${timestamp}]</span><span>${message}</span>`;
+            consoleLog.appendChild(entry);
+            consoleLog.scrollTop = consoleLog.scrollHeight;
+        }
+        
+        function logRequest(endpoint, request, response, timing) {
+            if (!loggingEnabled) return;
+            
+            const logEntry = {
+                timestamp: new Date().toISOString(),
+                endpoint,
+                request,
+                response,
+                timing,
+                success: !response.error
+            };
+            
+            requestLog.push(logEntry);
+            
+            const requestLogDiv = document.getElementById('request-log');
+            const entry = document.createElement('div');
+            entry.style.marginBottom = '12px';
+            entry.style.padding = '8px';
+            entry.style.borderLeft = `3px solid ${logEntry.success ? '#16a34a' : '#dc2626'}`;
+            entry.style.background = '#0f172a';
+            entry.innerHTML = `
+                <strong>${endpoint}</strong> - ${timing}ms
+                <br><small>${logEntry.timestamp}</small>
+                <br><pre style="margin-top: 4px; font-size: 0.8rem;">${JSON.stringify(logEntry, null, 2).substring(0, 200)}...</pre>
+            `;
+            requestLogDiv.appendChild(entry);
+            requestLogDiv.scrollTop = requestLogDiv.scrollHeight;
+        }
+        
+        // Make functions globally available
+        window.testStoryGeneration = async function() {
+            const prompt = document.getElementById('story-prompt').value;
+            const systemInstruction = document.getElementById('story-system').value;
+            const output = document.getElementById('story-output');
+            const metrics = document.getElementById('story-metrics');
+            
+            output.textContent = 'Generating story...';
+            output.className = 'output';
+            logConsole('Starting story generation test', 'info');
+            
+            const startTime = performance.now();
+            
+            try {
+                const token = await appCheck.getToken();
+                const response = await fetch('/generateStory', {
+                    method: 'POST',
+                    headers: {
+                        'Content-Type': 'application/json',
+                        'X-Firebase-AppCheck': token.token
+                    },
+                    body: JSON.stringify({ prompt, systemInstruction })
+                });
+                
+                const endTime = performance.now();
+                const timing = Math.round(endTime - startTime);
+                
+                const data = await response.json();
+                
+                if (response.ok) {
+                    output.textContent = JSON.stringify(data, null, 2);
+                    output.className = 'output success';
+                    metrics.innerHTML = `<div class="metric"><span class="metric-label">Response Time</span><span class="metric-value">${timing}ms</span></div>`;
+                    logConsole('Story generation successful', 'success');
+                    logRequest('/generateStory', { prompt, systemInstruction }, data, timing);
+                } else {
+                    throw new Error(data.error || 'Request failed');
+                }
+            } catch (error) {
+                const endTime = performance.now();
+                const timing = Math.round(endTime - startTime);
+                output.textContent = 'Error: ' + error.message;
+                output.className = 'output error';
+                logConsole('Story generation failed: ' + error.message, 'error');
+                logRequest('/generateStory', { prompt, systemInstruction }, { error: error.message }, timing);
+            }
+        };
+        
+        window.testTTS = async function() {
+            const text = document.getElementById('tts-text').value;
+            const voice = document.getElementById('tts-voice').value;
+            const accent = document.getElementById('tts-accent').value;
+            const output = document.getElementById('tts-output');
+            const metrics = document.getElementById('tts-metrics');
+            const audioPlayer = document.getElementById('tts-audio');
+            
+            output.textContent = 'Generating speech...';
+            output.className = 'output';
+            audioPlayer.classList.add('hidden');
+            logConsole('Starting TTS test', 'info');
+            
+            const startTime = performance.now();
+            
+            try {
+                const token = await appCheck.getToken();
+                const response = await fetch('/generateTTS', {
+                    method: 'POST',
+                    headers: {
+                        'Content-Type': 'application/json',
+                        'X-Firebase-AppCheck': token.token
+                    },
+                    body: JSON.stringify({ text, voice, accent })
+                });
+                
+                const endTime = performance.now();
+                const timing = Math.round(endTime - startTime);
+                
+                const data = await response.json();
+                
+                if (response.ok && data.candidates && data.candidates[0]) {
+                    output.textContent = 'Audio generated successfully!';
+                    output.className = 'output success';
+                    metrics.innerHTML = `<div class="metric"><span class="metric-label">Response Time</span><span class="metric-value">${timing}ms</span></div>`;
+                    
+                    // Play audio if available
+                    if (data.candidates[0].content && data.candidates[0].content.parts && data.candidates[0].content.parts[0].inlineData) {
+                        const audioData = data.candidates[0].content.parts[0].inlineData.data;
+                        audioPlayer.src = 'data:audio/mp3;base64,' + audioData;
+                        audioPlayer.classList.remove('hidden');
+                    }
+                    
+                    logConsole('TTS generation successful', 'success');
+                    logRequest('/generateTTS', { text, voice, accent }, { success: true }, timing);
+                } else {
+                    throw new Error('Invalid response format');
+                }
+            } catch (error) {
+                const endTime = performance.now();
+                const timing = Math.round(endTime - startTime);
+                output.textContent = 'Error: ' + error.message;
+                output.className = 'output error';
+                logConsole('TTS generation failed: ' + error.message, 'error');
+                logRequest('/generateTTS', { text, voice, accent }, { error: error.message }, timing);
+            }
+        };
+        
+        window.testImageGeneration = async function() {
+            const prompt = document.getElementById('image-prompt').value;
+            const output = document.getElementById('image-output');
+            const metrics = document.getElementById('image-metrics');
+            const imagePreview = document.getElementById('image-preview');
+            
+            output.textContent = 'Generating image...';
+            output.className = 'output';
+            imagePreview.classList.add('hidden');
+            logConsole('Starting image generation test', 'info');
+            
+            const startTime = performance.now();
+            
+            try {
+                const token = await appCheck.getToken();
+                const response = await fetch('/generateImage', {
+                    method: 'POST',
+                    headers: {
+                        'Content-Type': 'application/json',
+                        'X-Firebase-AppCheck': token.token
+                    },
+                    body: JSON.stringify({ prompt })
+                });
+                
+                const endTime = performance.now();
+                const timing = Math.round(endTime - startTime);
+                
+                const data = await response.json();
+                
+                if (response.ok && data.candidates && data.candidates[0]) {
+                    output.textContent = 'Image generated successfully!';
+                    output.className = 'output success';
+                    metrics.innerHTML = `<div class="metric"><span class="metric-label">Response Time</span><span class="metric-value">${timing}ms</span></div>`;
+                    
+                    // Display image if available
+                    if (data.candidates[0].content && data.candidates[0].content.parts && data.candidates[0].content.parts[0].inlineData) {
+                        const imageData = data.candidates[0].content.parts[0].inlineData.data;
+                        imagePreview.src = 'data:image/jpeg;base64,' + imageData;
+                        imagePreview.classList.remove('hidden');
+                    }
+                    
+                    logConsole('Image generation successful', 'success');
+                    logRequest('/generateImage', { prompt }, { success: true }, timing);
+                } else {
+                    throw new Error('Invalid response format');
+                }
+            } catch (error) {
+                const endTime = performance.now();
+                const timing = Math.round(endTime - startTime);
+                output.textContent = 'Error: ' + error.message;
+                output.className = 'output error';
+                logConsole('Image generation failed: ' + error.message, 'error');
+                logRequest('/generateImage', { prompt }, { error: error.message }, timing);
+            }
+        };
+        
+        window.clearOutput = function(id) {
+            document.getElementById(id).textContent = 'Output will appear here...';
+            document.getElementById(id).className = 'output';
+        };
+        
+        window.toggleLogging = function() {
+            loggingEnabled = !loggingEnabled;
+            document.getElementById('log-toggle').classList.toggle('active');
+            logConsole('Request logging ' + (loggingEnabled ? 'enabled' : 'disabled'), 'info');
+        };
+        
+        window.toggleVerbose = function() {
+            verboseMode = !verboseMode;
+            document.getElementById('verbose-toggle').classList.toggle('active');
+            logConsole('Verbose mode ' + (verboseMode ? 'enabled' : 'disabled'), 'info');
+        };
+        
+        window.clearRequestLog = function() {
+            requestLog = [];
+            document.getElementById('request-log').textContent = 'No requests logged yet...';
+            logConsole('Request log cleared', 'info');
+        };
+        
+        window.clearConsole = function() {
+            document.getElementById('console-log').innerHTML = '<div class="log-entry info"><span class="timestamp">[' + new Date().toLocaleTimeString() + ']</span><span>Console cleared</span></div>';
+        };
+        
+        window.exportLog = function() {
+            const dataStr = JSON.stringify(requestLog, null, 2);
+            const dataBlob = new Blob([dataStr], { type: 'application/json' });
+            const url = URL.createObjectURL(dataBlob);
+            const link = document.createElement('a');
+            link.href = url;
+            link.download = `dreamweaver-debug-log-${Date.now()}.json`;
+            link.click();
+            URL.revokeObjectURL(url);
+            logConsole('Log exported to file', 'success');
+        };
+        
+        window.testError = function() {
+            logConsole('This is a test error message', 'error');
+            throw new Error('Test error thrown intentionally');
+        };
+    </script>
+</body>
+</html>
