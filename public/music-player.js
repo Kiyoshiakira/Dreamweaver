@@ -602,6 +602,7 @@ const MusicPlayer = (function () {
     addToPlaylist,
     removeFromPlaylist,
     loadPlaylist,
+    playPlaylistItem,
     getPlaylists: () => playlists,
     getActivePlaylist: () => activePlaylistId,
     _debugState: () => ({ source, localTracks, localIndex, ytQueue, ytIndex, playlists, activePlaylistId, playlistIndex }),

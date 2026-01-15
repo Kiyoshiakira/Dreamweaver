@@ -2541,32 +2541,8 @@
         function playPlaylistItemByIndex(index) {
             if (typeof MusicPlayer === 'undefined') return;
             
-            const debugState = MusicPlayer._debugState();
-            const activePlaylistId = MusicPlayer.getActivePlaylist();
-            const playlists = MusicPlayer.getPlaylists();
-            
-            if (!activePlaylistId || !playlists[activePlaylistId]) return;
-            
-            const playlist = playlists[activePlaylistId];
-            if (index < 0 || index >= playlist.items.length) return;
-            
-            const item = playlist.items[index];
-            
-            // Handle different source types
-            if (item.type === 'youtube') {
-                const musicSource = document.getElementById('music-source-select');
-                if (musicSource) musicSource.value = 'youtube';
-                MusicPlayer.setSource('youtube');
-                MusicPlayer.loadYouTubeAndPlay(item.data);
-            } else if (item.type === 'spotify') {
-                const musicSource = document.getElementById('music-source-select');
-                if (musicSource) musicSource.value = 'spotify';
-                if (window.playSpotifyTrackFromPlaylist) {
-                    window.playSpotifyTrackFromPlaylist(item.data);
-                }
-            } else if (item.type === 'local') {
-                alert('Local files are session-only. Please upload the file again to play it.');
-            }
+            // Use the MusicPlayer's exposed playPlaylistItem function
+            MusicPlayer.playPlaylistItem(index);
             
             // Update display to show current item
             updateReaderPlaylistDisplay();
