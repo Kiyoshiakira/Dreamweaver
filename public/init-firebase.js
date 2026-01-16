@@ -96,17 +96,21 @@ try {
                         // Initialize App Check - wait for grecaptcha.enterprise to be ready
                         // This ensures the reCAPTCHA Enterprise script is loaded before App Check initialization
                         const initializeAppCheckWhenReady = async () => {
+                            // Configuration for script loading timeout
+                            const SCRIPT_LOAD_TIMEOUT_MS = 10000; // 10 seconds
+                            const POLL_INTERVAL_MS = 200; // Check every 200ms
+                            const MAX_ATTEMPTS = SCRIPT_LOAD_TIMEOUT_MS / POLL_INTERVAL_MS; // 50 attempts
+                            
                             try {
                                 // Check if grecaptcha.enterprise is available
                                 if (typeof grecaptcha === 'undefined' || typeof grecaptcha.enterprise === 'undefined') {
                                     console.log('⏳ Waiting for reCAPTCHA Enterprise script to load...');
                                     
-                                    // Wait up to 10 seconds for the script to load
+                                    // Wait up to SCRIPT_LOAD_TIMEOUT_MS for the script to load
                                     let attempts = 0;
-                                    const maxAttempts = 50; // 50 * 200ms = 10 seconds
                                     
-                                    while (attempts < maxAttempts) {
-                                        await new Promise(resolve => setTimeout(resolve, 200));
+                                    while (attempts < MAX_ATTEMPTS) {
+                                        await new Promise(resolve => setTimeout(resolve, POLL_INTERVAL_MS));
                                         
                                         if (typeof grecaptcha !== 'undefined' && typeof grecaptcha.enterprise !== 'undefined') {
                                             console.log('✓ reCAPTCHA Enterprise script is now available');

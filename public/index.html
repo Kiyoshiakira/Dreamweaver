@@ -974,6 +974,51 @@
         }
         
         /**
+         * Helper function to get App Check token with enhanced error logging
+         * Provides detailed troubleshooting guidance for 400 errors
+         * 
+         * @returns {Promise<string>} - App Check token
+         * @throws {Error} - If token acquisition fails
+         */
+        async function getAppCheckTokenWithErrorHandling() {
+            // Import getToken from App Check
+            const { getToken } = await import("https://www.gstatic.com/firebasejs/11.6.1/firebase-app-check.js");
+            
+            try {
+                const appCheckTokenResponse = await getToken(window.fb.appCheck, /* forceRefresh */ false);
+                return appCheckTokenResponse.token;
+            } catch (tokenError) {
+                console.error('❌ App Check token exchange failed:', tokenError);
+                
+                // Log detailed error information for 400 errors
+                if (tokenError.message && (tokenError.message.includes('400') || tokenError.message.includes('Bad Request'))) {
+                    console.error('');
+                    console.error('🔍 App Check Token Exchange Failed (400 Bad Request)');
+                    console.error('');
+                    console.error('Troubleshooting steps:');
+                    console.error('  1. Verify domain authorization:');
+                    console.error('     → Google Cloud Console > Security > reCAPTCHA Enterprise');
+                    console.error('     → Ensure current domain (' + window.location.hostname + ') is in allowed domains');
+                    console.error('  2. Check API status:');
+                    console.error('     → Google Cloud Console > APIs & Services');
+                    console.error('     → Verify "reCAPTCHA Enterprise API" is enabled');
+                    console.error('  3. Verify billing:');
+                    console.error('     → reCAPTCHA Enterprise requires active billing on your GCP project');
+                    console.error('  4. Validate App Check configuration:');
+                    console.error('     → Firebase Console > Build > App Check');
+                    console.error('     → Verify provider is correctly configured for this app');
+                    console.error('');
+                    console.error('Error details:', tokenError.message);
+                    if (tokenError.stack) {
+                        console.error('Stack trace:', tokenError.stack);
+                    }
+                }
+                
+                throw tokenError;
+            }
+        }
+        
+        /**
          * Helper function to call the Firebase proxy for story generation
          * Acquires an App Check token and POSTs to the generateStory endpoint
          * 
@@ -989,43 +1034,8 @@
             }
             
             try {
-                // Import getToken from App Check
-                const { getToken } = await import("https://www.gstatic.com/firebasejs/11.6.1/firebase-app-check.js");
-                
                 // Get App Check token with enhanced error handling
-                let appCheckToken;
-                try {
-                    const appCheckTokenResponse = await getToken(window.fb.appCheck, /* forceRefresh */ false);
-                    appCheckToken = appCheckTokenResponse.token;
-                } catch (tokenError) {
-                    console.error('❌ App Check token exchange failed:', tokenError);
-                    
-                    // Log detailed error information for 400 errors
-                    if (tokenError.message && (tokenError.message.includes('400') || tokenError.message.includes('Bad Request'))) {
-                        console.error('');
-                        console.error('🔍 App Check Token Exchange Failed (400 Bad Request)');
-                        console.error('');
-                        console.error('Troubleshooting steps:');
-                        console.error('  1. Verify domain authorization:');
-                        console.error('     → Google Cloud Console > Security > reCAPTCHA Enterprise');
-                        console.error('     → Ensure current domain (' + window.location.hostname + ') is in allowed domains');
-                        console.error('  2. Check API status:');
-                        console.error('     → Google Cloud Console > APIs & Services');
-                        console.error('     → Verify "reCAPTCHA Enterprise API" is enabled');
-                        console.error('  3. Verify billing:');
-                        console.error('     → reCAPTCHA Enterprise requires active billing on your GCP project');
-                        console.error('  4. Validate App Check configuration:');
-                        console.error('     → Firebase Console > Build > App Check');
-                        console.error('     → Verify provider is correctly configured for this app');
-                        console.error('');
-                        console.error('Error details:', tokenError.message);
-                        if (tokenError.stack) {
-                            console.error('Stack trace:', tokenError.stack);
-                        }
-                    }
-                    
-                    throw tokenError;
-                }
+                const appCheckToken = await getAppCheckTokenWithErrorHandling();
                 
                 console.log('Calling generateStory proxy endpoint with App Check token');
                 
@@ -1089,43 +1099,8 @@
             }
             
             try {
-                // Import getToken from App Check
-                const { getToken } = await import("https://www.gstatic.com/firebasejs/11.6.1/firebase-app-check.js");
-                
                 // Get App Check token with enhanced error handling
-                let appCheckToken;
-                try {
-                    const appCheckTokenResponse = await getToken(window.fb.appCheck, /* forceRefresh */ false);
-                    appCheckToken = appCheckTokenResponse.token;
-                } catch (tokenError) {
-                    console.error('❌ App Check token exchange failed:', tokenError);
-                    
-                    // Log detailed error information for 400 errors
-                    if (tokenError.message && (tokenError.message.includes('400') || tokenError.message.includes('Bad Request'))) {
-                        console.error('');
-                        console.error('🔍 App Check Token Exchange Failed (400 Bad Request)');
-                        console.error('');
-                        console.error('Troubleshooting steps:');
-                        console.error('  1. Verify domain authorization:');
-                        console.error('     → Google Cloud Console > Security > reCAPTCHA Enterprise');
-                        console.error('     → Ensure current domain (' + window.location.hostname + ') is in allowed domains');
-                        console.error('  2. Check API status:');
-                        console.error('     → Google Cloud Console > APIs & Services');
-                        console.error('     → Verify "reCAPTCHA Enterprise API" is enabled');
-                        console.error('  3. Verify billing:');
-                        console.error('     → reCAPTCHA Enterprise requires active billing on your GCP project');
-                        console.error('  4. Validate App Check configuration:');
-                        console.error('     → Firebase Console > Build > App Check');
-                        console.error('     → Verify provider is correctly configured for this app');
-                        console.error('');
-                        console.error('Error details:', tokenError.message);
-                        if (tokenError.stack) {
-                            console.error('Stack trace:', tokenError.stack);
-                        }
-                    }
-                    
-                    throw tokenError;
-                }
+                const appCheckToken = await getAppCheckTokenWithErrorHandling();
                 
                 console.log('Calling generateTTS proxy endpoint with App Check token');
                 
@@ -1177,43 +1152,8 @@
             }
             
             try {
-                // Import getToken from App Check
-                const { getToken } = await import("https://www.gstatic.com/firebasejs/11.6.1/firebase-app-check.js");
-                
                 // Get App Check token with enhanced error handling
-                let appCheckToken;
-                try {
-                    const appCheckTokenResponse = await getToken(window.fb.appCheck, /* forceRefresh */ false);
-                    appCheckToken = appCheckTokenResponse.token;
-                } catch (tokenError) {
-                    console.error('❌ App Check token exchange failed:', tokenError);
-                    
-                    // Log detailed error information for 400 errors
-                    if (tokenError.message && (tokenError.message.includes('400') || tokenError.message.includes('Bad Request'))) {
-                        console.error('');
-                        console.error('🔍 App Check Token Exchange Failed (400 Bad Request)');
-                        console.error('');
-                        console.error('Troubleshooting steps:');
-                        console.error('  1. Verify domain authorization:');
-                        console.error('     → Google Cloud Console > Security > reCAPTCHA Enterprise');
-                        console.error('     → Ensure current domain (' + window.location.hostname + ') is in allowed domains');
-                        console.error('  2. Check API status:');
-                        console.error('     → Google Cloud Console > APIs & Services');
-                        console.error('     → Verify "reCAPTCHA Enterprise API" is enabled');
-                        console.error('  3. Verify billing:');
-                        console.error('     → reCAPTCHA Enterprise requires active billing on your GCP project');
-                        console.error('  4. Validate App Check configuration:');
-                        console.error('     → Firebase Console > Build > App Check');
-                        console.error('     → Verify provider is correctly configured for this app');
-                        console.error('');
-                        console.error('Error details:', tokenError.message);
-                        if (tokenError.stack) {
-                            console.error('Stack trace:', tokenError.stack);
-                        }
-                    }
-                    
-                    throw tokenError;
-                }
+                const appCheckToken = await getAppCheckTokenWithErrorHandling();
                 
                 console.log('Calling generateImage proxy endpoint with App Check token');
                 
