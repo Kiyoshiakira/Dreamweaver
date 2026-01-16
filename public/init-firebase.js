@@ -93,20 +93,100 @@ try {
                             'Get your reCAPTCHA v3 site key from: https://www.google.com/recaptcha/admin ' +
                             'Then add your domain(s) and copy the site key into index.html at line ~301.';
                     } else {
-                        // Initialize App Check
-                        try {
-                            appCheck = initializeAppCheck(app, {
-                                provider: new ReCaptchaV3Provider(window.__recaptcha_site_key),
-                                isTokenAutoRefreshEnabled: true
-                            });
-                            console.log('✓ Firebase App Check initialized successfully');
-                            // Clear error since both Firebase and App Check are working
-                            firebaseInitError = null;
-                        } catch (appCheckError) {
-                            console.error('App Check initialization failed:', appCheckError.message);
-                            firebaseInitError = 'App Check Initialization Failed: ' + appCheckError.message + '. ' +
-                                'Dreamweaver may not function without App Check. Please verify your reCAPTCHA v3 site key.';
-                        }
+                        // Initialize App Check - wait for grecaptcha.enterprise to be ready
+                        // This ensures the reCAPTCHA Enterprise script is loaded before App Check initialization
+                        const initializeAppCheckWhenReady = async () => {
+                            // Configuration for script loading timeout
+                            const SCRIPT_LOAD_TIMEOUT_MS = 10000; // 10 seconds
+                            const POLL_INTERVAL_MS = 200; // Check every 200ms
+                            const MAX_ATTEMPTS = SCRIPT_LOAD_TIMEOUT_MS / POLL_INTERVAL_MS; // 50 attempts
+                            
+                            try {
+                                // Check if grecaptcha.enterprise is available
+                                if (typeof grecaptcha === 'undefined' || typeof grecaptcha.enterprise === 'undefined') {
+                                    console.log('⏳ Waiting for reCAPTCHA Enterprise script to load...');
+                                    
+                                    // Wait up to SCRIPT_LOAD_TIMEOUT_MS for the script to load
+                                    let attempts = 0;
+                                    
+                                    while (attempts < MAX_ATTEMPTS) {
+                                        await new Promise(resolve => setTimeout(resolve, POLL_INTERVAL_MS));
+                                        
+                                        if (typeof grecaptcha !== 'undefined' && typeof grecaptcha.enterprise !== 'undefined') {
+                                            console.log('✓ reCAPTCHA Enterprise script is now available');
+                                            break;
+                                        }
+                                        
+                                        attempts++;
+                                    }
+                                    
+                                    if (typeof grecaptcha === 'undefined' || typeof grecaptcha.enterprise === 'undefined') {
+                                        throw new Error('reCAPTCHA Enterprise script failed to load within timeout period');
+                                    }
+                                }
+                                
+                                // Wait for grecaptcha.enterprise.ready
+                                if (typeof grecaptcha.enterprise.ready === 'function') {
+                                    await new Promise((resolve) => {
+                                        grecaptcha.enterprise.ready(resolve);
+                                    });
+                                    console.log('✓ reCAPTCHA Enterprise is ready');
+                                }
+                                
+                                // Now initialize App Check
+                                appCheck = initializeAppCheck(app, {
+                                    provider: new ReCaptchaV3Provider(window.__recaptcha_site_key),
+                                    isTokenAutoRefreshEnabled: true
+                                });
+                                
+                                console.log('✓ Firebase App Check initialized successfully');
+                                
+                                // Clear error since both Firebase and App Check are working
+                                firebaseInitError = null;
+                                
+                                // Update window.fb to reflect successful initialization
+                                window.fb.appCheck = appCheck;
+                                window.fb.firebaseInitError = null;
+                                
+                            } catch (appCheckError) {
+                                console.error('App Check initialization failed:', appCheckError.message);
+                                
+                                // Enhanced error message with troubleshooting steps
+                                let errorDetails = 'App Check Initialization Failed: ' + appCheckError.message;
+                                
+                                // Check for specific error patterns and provide targeted guidance
+                                if (appCheckError.message.includes('400') || appCheckError.message.includes('Bad Request')) {
+                                    errorDetails += '\n\n🔍 App Check Token Exchange Failed (400 Bad Request)';
+                                    errorDetails += '\n\nCommon causes and fixes:';
+                                    errorDetails += '\n  1. Domain not authorized:';
+                                    errorDetails += '\n     → Go to Google Cloud Console > Security > reCAPTCHA Enterprise';
+                                    errorDetails += '\n     → Add your domain to the "Domains" list (include localhost for dev)';
+                                    errorDetails += '\n  2. reCAPTCHA Enterprise API not enabled:';
+                                    errorDetails += '\n     → Go to Google Cloud Console > APIs & Services';
+                                    errorDetails += '\n     → Enable "reCAPTCHA Enterprise API"';
+                                    errorDetails += '\n  3. Billing not enabled:';
+                                    errorDetails += '\n     → reCAPTCHA Enterprise requires billing to be enabled on your GCP project';
+                                    errorDetails += '\n     → Go to Google Cloud Console > Billing';
+                                    errorDetails += '\n  4. App Check provider misconfigured:';
+                                    errorDetails += '\n     → Firebase Console > Build > App Check';
+                                    errorDetails += '\n     → Verify your web app is registered with the correct provider';
+                                    errorDetails += '\n     → Ensure the site key matches your reCAPTCHA Enterprise key';
+                                } else if (appCheckError.message.includes('grecaptcha')) {
+                                    errorDetails += '\n\n🔍 reCAPTCHA Enterprise Script Issue';
+                                    errorDetails += '\n\nPossible causes:';
+                                    errorDetails += '\n  - Script failed to load or was blocked';
+                                    errorDetails += '\n  - Invalid site key';
+                                    errorDetails += '\n  - Network or CSP restrictions';
+                                }
+                                
+                                console.error(errorDetails);
+                                firebaseInitError = errorDetails;
+                                window.fb.firebaseInitError = errorDetails;
+                            }
+                        };
+                        
+                        // Start async initialization
+                        initializeAppCheckWhenReady();
                     }
                 } catch (initError) {
                     console.error('Firebase app initialization failed:', initError.message);
