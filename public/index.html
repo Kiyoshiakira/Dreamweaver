@@ -236,14 +236,22 @@
            const DEFAULT_TIMEOUT_MS = 10000; // 10 seconds
            const POLL_INTERVAL_MS = 200; // Check every 200ms
            
-           timeoutMs = timeoutMs || DEFAULT_TIMEOUT_MS;
+           // Validate and sanitize timeout parameter
+           timeoutMs = (typeof timeoutMs === 'number' && timeoutMs > 0) ? timeoutMs : DEFAULT_TIMEOUT_MS;
            const maxAttempts = timeoutMs / POLL_INTERVAL_MS;
            
            return new Promise((resolve) => {
                let attempts = 0;
                let resolved = false; // Flag to prevent multiple resolutions
+               let timeoutId = null; // Track timeout to prevent race conditions
                
                const checkReady = () => {
+                   // Clear any pending timeout to prevent race conditions
+                   if (timeoutId) {
+                       clearTimeout(timeoutId);
+                       timeoutId = null;
+                   }
+                   
                    // Check multiple possible API shapes
                    if (typeof grecaptcha !== 'undefined' && typeof grecaptcha.enterprise !== 'undefined') {
                        // Check for grecaptcha.enterprise.ready
@@ -296,7 +304,7 @@
                    // Not ready yet, try again if we haven't exceeded max attempts
                    attempts++;
                    if (attempts < maxAttempts) {
-                       setTimeout(checkReady, POLL_INTERVAL_MS);
+                       timeoutId = setTimeout(checkReady, POLL_INTERVAL_MS);
                    } else {
                        // Timeout - resolve false
                        if (!resolved) {

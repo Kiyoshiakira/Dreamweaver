@@ -79,9 +79,14 @@ try {
                     console.log('✓ Firebase app initialized successfully');
                     
                     // Initialize App Check if reCAPTCHA site key is provided
-                    const hasRecaptchaPlaceholder = (window.__recaptcha_site_key === 'YOUR_RECAPTCHA_ENTERPRISE_SITE_KEY' || 
-                                                     window.__recaptcha_site_key === 'YOUR_RECAPTCHA_KEY' ||
-                                                     window.__recaptcha_site_key === 'YOUR_RECAPTCHA_V3_SITE_KEY');
+                    // List of known placeholder values
+                    const RECAPTCHA_PLACEHOLDERS = [
+                        'YOUR_RECAPTCHA_ENTERPRISE_SITE_KEY',
+                        'YOUR_RECAPTCHA_KEY',
+                        'YOUR_RECAPTCHA_V3_SITE_KEY'
+                    ];
+                    
+                    const hasRecaptchaPlaceholder = RECAPTCHA_PLACEHOLDERS.includes(window.__recaptcha_site_key);
                     const hasInvalidRecaptcha = (!window.__recaptcha_site_key || window.__recaptcha_site_key.trim() === '');
                     
                     if (typeof window.__recaptcha_site_key === 'undefined' || hasInvalidRecaptcha) {
