@@ -185,11 +185,12 @@
                }
                
                // Auto-dismiss banner after 12 seconds
+               const BANNER_DISMISS_DELAY_MS = 12000; // 12 seconds
                setTimeout(function() {
                    if (document.getElementById('recaptcha-config-warning')) {
                        document.getElementById('recaptcha-config-warning').remove();
                    }
-               }, 12000);
+               }, BANNER_DISMISS_DELAY_MS);
                
                return; // Don't load the script if key is missing
            }
@@ -231,9 +232,12 @@
         * @returns {Promise<boolean>} - Resolves to true when ready, false on timeout
         */
        window.__waitForReCaptchaEnterprise = function(timeoutMs) {
-           timeoutMs = timeoutMs || 10000;
-           const pollInterval = 200;
-           const maxAttempts = timeoutMs / pollInterval;
+           // Configuration constants
+           const DEFAULT_TIMEOUT_MS = 10000; // 10 seconds
+           const POLL_INTERVAL_MS = 200; // Check every 200ms
+           
+           timeoutMs = timeoutMs || DEFAULT_TIMEOUT_MS;
+           const maxAttempts = timeoutMs / POLL_INTERVAL_MS;
            
            return new Promise((resolve) => {
                let attempts = 0;
@@ -276,7 +280,7 @@
                    // Not ready yet, try again if we haven't exceeded max attempts
                    attempts++;
                    if (attempts < maxAttempts) {
-                       setTimeout(checkReady, pollInterval);
+                       setTimeout(checkReady, POLL_INTERVAL_MS);
                    } else {
                        // Timeout - resolve false
                        resolve(false);

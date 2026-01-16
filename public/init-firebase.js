@@ -98,18 +98,20 @@ try {
                         // Initialize App Check - wait for grecaptcha.enterprise to be ready
                         // This ensures the reCAPTCHA Enterprise script is loaded before App Check initialization
                         const initializeAppCheckWhenReady = async () => {
+                            // Configuration constants
+                            const RECAPTCHA_WAIT_TIMEOUT_MS = 10000; // 10 seconds
+                            
                             try {
                                 console.log('⏳ Waiting for reCAPTCHA Enterprise API to be ready...');
                                 
                                 // Use the helper function if available, otherwise fallback to manual check
                                 let isReady = false;
                                 if (typeof window.__waitForReCaptchaEnterprise === 'function') {
-                                    isReady = await window.__waitForReCaptchaEnterprise(10000);
+                                    isReady = await window.__waitForReCaptchaEnterprise(RECAPTCHA_WAIT_TIMEOUT_MS);
                                 } else {
                                     // Fallback: manual polling for grecaptcha.enterprise
-                                    const TIMEOUT_MS = 10000;
-                                    const POLL_INTERVAL_MS = 200;
-                                    const MAX_ATTEMPTS = TIMEOUT_MS / POLL_INTERVAL_MS;
+                                    const POLL_INTERVAL_MS = 200; // Check every 200ms
+                                    const MAX_ATTEMPTS = RECAPTCHA_WAIT_TIMEOUT_MS / POLL_INTERVAL_MS;
                                     let attempts = 0;
                                     
                                     while (attempts < MAX_ATTEMPTS) {
