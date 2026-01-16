@@ -79,8 +79,9 @@ try {
                     console.log('✓ Firebase app initialized successfully');
                     
                     // Initialize App Check if reCAPTCHA site key is provided
-                    const hasRecaptchaPlaceholder = (window.__recaptcha_site_key === 'YOUR_RECAPTCHA_V3_SITE_KEY' || 
-                                                     window.__recaptcha_site_key === 'YOUR_RECAPTCHA_KEY');
+                    const hasRecaptchaPlaceholder = (window.__recaptcha_site_key === 'YOUR_RECAPTCHA_ENTERPRISE_SITE_KEY' || 
+                                                     window.__recaptcha_site_key === 'YOUR_RECAPTCHA_KEY' ||
+                                                     window.__recaptcha_site_key === 'YOUR_RECAPTCHA_V3_SITE_KEY');
                     const hasInvalidRecaptcha = (!window.__recaptcha_site_key || window.__recaptcha_site_key.trim() === '');
                     
                     if (typeof window.__recaptcha_site_key === 'undefined' || hasInvalidRecaptcha) {
@@ -113,6 +114,7 @@ try {
                                     
                                     while (attempts < MAX_ATTEMPTS) {
                                         // Check for grecaptcha.enterprise.ready or grecaptcha.enterprise.execute
+                                        // Note: If execute exists, the API is ready even without ready() method
                                         if (typeof grecaptcha !== 'undefined' && 
                                             typeof grecaptcha.enterprise !== 'undefined' &&
                                             (typeof grecaptcha.enterprise.ready === 'function' || 

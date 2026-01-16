@@ -243,9 +243,14 @@
                    if (typeof grecaptcha !== 'undefined' && typeof grecaptcha.enterprise !== 'undefined') {
                        // Check for grecaptcha.enterprise.ready
                        if (typeof grecaptcha.enterprise.ready === 'function') {
-                           grecaptcha.enterprise.ready(() => {
-                               resolve(true);
-                           });
+                           try {
+                               grecaptcha.enterprise.ready(() => {
+                                   resolve(true);
+                               });
+                           } catch (e) {
+                               console.warn('Error calling grecaptcha.enterprise.ready:', e);
+                               resolve(false);
+                           }
                            return;
                        }
                        // Check for grecaptcha.enterprise.execute (API is ready if execute exists)
@@ -257,9 +262,14 @@
                    
                    // Check for standard grecaptcha.ready as fallback
                    if (typeof grecaptcha !== 'undefined' && typeof grecaptcha.ready === 'function') {
-                       grecaptcha.ready(() => {
-                           resolve(true);
-                       });
+                       try {
+                           grecaptcha.ready(() => {
+                               resolve(true);
+                           });
+                       } catch (e) {
+                           console.warn('Error calling grecaptcha.ready:', e);
+                           resolve(false);
+                       }
                        return;
                    }
                    
