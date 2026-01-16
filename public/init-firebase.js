@@ -118,16 +118,6 @@ try {
                                 
                                 console.log('✓ reCAPTCHA Enterprise API is ready');
                                 
-                                // Wait for grecaptcha.enterprise.ready if available
-                                if (typeof grecaptcha !== 'undefined' && 
-                                    typeof grecaptcha.enterprise !== 'undefined' &&
-                                    typeof grecaptcha.enterprise.ready === 'function') {
-                                    await new Promise((resolve) => {
-                                        grecaptcha.enterprise.ready(resolve);
-                                    });
-                                    console.log('✓ grecaptcha.enterprise.ready() completed');
-                                }
-                                
                                 // Now initialize App Check with ReCaptchaEnterpriseProvider
                                 appCheck = initializeAppCheck(app, {
                                     provider: new ReCaptchaEnterpriseProvider(window.__recaptcha_site_key),
