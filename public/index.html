@@ -69,11 +69,11 @@
              measurementId: "G-J9V0ZBQCEK"
        });
 
-       // Replace with your reCAPTCHA v3 site key (from https://www.google.com/recaptcha/admin)
+       // Replace with your reCAPTCHA Enterprise site key (from https://console.cloud.google.com/security/recaptcha)
        // IMPORTANT: This should be set at deploy/build time (e.g., via CI/CD secret replacement)
        // or left empty and provided by your Firebase Console App Check provider settings.
        // DO NOT commit actual secret keys to version control.
-       window.__recaptcha_site_key = "6LcP6UYsAAAAAFkX23OtzZzOumCBRnUZhg_RYGCE";  // Your reCAPTCHA v3 site key here
+       window.__recaptcha_site_key = "";  // Your reCAPTCHA Enterprise site key here
     </script>
     
     <script>
@@ -184,6 +184,13 @@
                    });
                }
                
+               // Auto-dismiss banner after 12 seconds
+               setTimeout(function() {
+                   if (document.getElementById('recaptcha-config-warning')) {
+                       document.getElementById('recaptcha-config-warning').remove();
+                   }
+               }, 12000);
+               
                return; // Don't load the script if key is missing
            }
            
@@ -215,6 +222,60 @@
            // Append to head
            document.head.appendChild(script);
        })();
+       
+       /**
+        * Helper function to wait for reCAPTCHA Enterprise API to be ready
+        * Checks for grecaptcha.enterprise.ready, grecaptcha.ready, and grecaptcha.enterprise.execute
+        * 
+        * @param {number} timeoutMs - Maximum time to wait in milliseconds (default: 10000)
+        * @returns {Promise<boolean>} - Resolves to true when ready, false on timeout
+        */
+       window.__waitForReCaptchaEnterprise = function(timeoutMs) {
+           timeoutMs = timeoutMs || 10000;
+           const pollInterval = 200;
+           const maxAttempts = timeoutMs / pollInterval;
+           
+           return new Promise((resolve) => {
+               let attempts = 0;
+               
+               const checkReady = () => {
+                   // Check multiple possible API shapes
+                   if (typeof grecaptcha !== 'undefined' && typeof grecaptcha.enterprise !== 'undefined') {
+                       // Check for grecaptcha.enterprise.ready
+                       if (typeof grecaptcha.enterprise.ready === 'function') {
+                           grecaptcha.enterprise.ready(() => {
+                               resolve(true);
+                           });
+                           return;
+                       }
+                       // Check for grecaptcha.enterprise.execute (API is ready if execute exists)
+                       if (typeof grecaptcha.enterprise.execute === 'function') {
+                           resolve(true);
+                           return;
+                       }
+                   }
+                   
+                   // Check for standard grecaptcha.ready as fallback
+                   if (typeof grecaptcha !== 'undefined' && typeof grecaptcha.ready === 'function') {
+                       grecaptcha.ready(() => {
+                           resolve(true);
+                       });
+                       return;
+                   }
+                   
+                   // Not ready yet, try again if we haven't exceeded max attempts
+                   attempts++;
+                   if (attempts < maxAttempts) {
+                       setTimeout(checkReady, pollInterval);
+                   } else {
+                       // Timeout - resolve false
+                       resolve(false);
+                   }
+               };
+               
+               checkReady();
+           });
+       };
     </script>
     
     <!-- Firebase + App Check initialization module -->
@@ -1034,7 +1095,7 @@
             }
             
             try {
-                // Get App Check token with enhanced error handling
+                // Get App Check token with enhanced error handling and diagnostics
                 const appCheckToken = await getAppCheckTokenWithErrorHandling();
                 
                 console.log('Calling generateStory proxy endpoint with App Check token');
@@ -1075,6 +1136,17 @@
                 return data;
                 
             } catch (error) {
+                // Enhanced logging for App Check token failures
+                if (error.message && (error.message.includes('App Check') || error.message.includes('getToken'))) {
+                    console.error('❌ App Check getToken failed in callGenerateProxy:', error);
+                    console.info('💡 Troubleshooting hints:');
+                    console.info('  • Verify reCAPTCHA Enterprise site key is correctly configured');
+                    console.info('  • Check that reCAPTCHA Enterprise API is enabled in Google Cloud Console');
+                    console.info('  • Ensure current domain is in the allowed domains list');
+                    console.info('  • Verify Firebase App Check provider is properly configured');
+                    console.info('  • Check that billing is enabled for reCAPTCHA Enterprise');
+                }
+                
                 // Re-throw with more context
                 if (error.message && error.message.startsWith('PROXY_')) {
                     throw error;
@@ -1099,7 +1171,7 @@
             }
             
             try {
-                // Get App Check token with enhanced error handling
+                // Get App Check token with enhanced error handling and diagnostics
                 const appCheckToken = await getAppCheckTokenWithErrorHandling();
                 
                 console.log('Calling generateTTS proxy endpoint with App Check token');
@@ -1131,6 +1203,17 @@
                 return data;
                 
             } catch (error) {
+                // Enhanced logging for App Check token failures
+                if (error.message && (error.message.includes('App Check') || error.message.includes('getToken'))) {
+                    console.error('❌ App Check getToken failed in callTTSProxy:', error);
+                    console.info('💡 Troubleshooting hints:');
+                    console.info('  • Verify reCAPTCHA Enterprise site key is correctly configured');
+                    console.info('  • Check that reCAPTCHA Enterprise API is enabled in Google Cloud Console');
+                    console.info('  • Ensure current domain is in the allowed domains list');
+                    console.info('  • Verify Firebase App Check provider is properly configured');
+                    console.info('  • Check that billing is enabled for reCAPTCHA Enterprise');
+                }
+                
                 if (error.message && error.message.startsWith('TTS_PROXY_')) {
                     throw error;
                 }
@@ -1152,7 +1235,7 @@
             }
             
             try {
-                // Get App Check token with enhanced error handling
+                // Get App Check token with enhanced error handling and diagnostics
                 const appCheckToken = await getAppCheckTokenWithErrorHandling();
                 
                 console.log('Calling generateImage proxy endpoint with App Check token');
@@ -1182,6 +1265,17 @@
                 return data;
                 
             } catch (error) {
+                // Enhanced logging for App Check token failures
+                if (error.message && (error.message.includes('App Check') || error.message.includes('getToken'))) {
+                    console.error('❌ App Check getToken failed in callImageProxy:', error);
+                    console.info('💡 Troubleshooting hints:');
+                    console.info('  • Verify reCAPTCHA Enterprise site key is correctly configured');
+                    console.info('  • Check that reCAPTCHA Enterprise API is enabled in Google Cloud Console');
+                    console.info('  • Ensure current domain is in the allowed domains list');
+                    console.info('  • Verify Firebase App Check provider is properly configured');
+                    console.info('  • Check that billing is enabled for reCAPTCHA Enterprise');
+                }
+                
                 if (error.message && error.message.startsWith('IMAGE_PROXY_')) {
                     throw error;
                 }
