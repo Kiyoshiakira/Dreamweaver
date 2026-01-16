@@ -70,7 +70,151 @@
        });
 
        // Replace with your reCAPTCHA v3 site key (from https://www.google.com/recaptcha/admin)
+       // IMPORTANT: This should be set at deploy/build time (e.g., via CI/CD secret replacement)
+       // or left empty and provided by your Firebase Console App Check provider settings.
+       // DO NOT commit actual secret keys to version control.
        window.__recaptcha_site_key = "6LcP6UYsAAAAAFkX23OtzZzOumCBRnUZhg_RYGCE";  // Your reCAPTCHA v3 site key here
+    </script>
+    
+    <script>
+       // ========================================================================
+       // Dynamic reCAPTCHA Enterprise Script Loader
+       // ========================================================================
+       // This script dynamically injects the reCAPTCHA Enterprise script tag at runtime
+       // using the key from window.__recaptcha_site_key. This approach:
+       // 1. Avoids hard-coding keys in the HTML file
+       // 2. Ensures the script is loaded before App Check initialization
+       // 3. Provides helpful guidance when the key is missing
+       //
+       // HOW TO SECURELY PROVIDE THE KEY:
+       // Option 1 (Recommended): Use Firebase-managed App Check provider
+       //   - Go to Firebase Console > Build > App Check
+       //   - Register your app and enable reCAPTCHA Enterprise
+       //   - Firebase will manage the provider configuration automatically
+       //
+       // Option 2: Deploy-time secret replacement
+       //   - Store the key as a CI/CD secret (GitHub Secrets, GitLab CI/CD variables, etc.)
+       //   - Use a build/deploy script to replace the placeholder value at deploy time
+       //   - Example: sed -i "s/YOUR_RECAPTCHA_KEY/${RECAPTCHA_KEY}/" public/index.html
+       //
+       // Option 3: Environment-specific configuration
+       //   - Use different configuration files per environment (dev/staging/prod)
+       //   - Load the appropriate config at build/deploy time
+       //   - Keep config files out of version control (add to .gitignore)
+       //
+       // WHERE TO MANAGE THE KEY:
+       // - Firebase Console: https://console.firebase.google.com > Project Settings > App Check
+       // - Google Cloud Console: https://console.cloud.google.com > Security > reCAPTCHA Enterprise
+       // - Enable reCAPTCHA Enterprise API and ensure billing is enabled for your project
+       // - Add all your deployment domains (including localhost for testing) to the allowed domains list
+       
+       (function loadRecaptchaEnterprise() {
+           const siteKey = window.__recaptcha_site_key;
+           
+           // Check if site key is missing or appears to be a placeholder
+           const isMissingOrPlaceholder = !siteKey || 
+               siteKey.trim() === '' || 
+               siteKey === 'YOUR_RECAPTCHA_V3_SITE_KEY' ||
+               siteKey === 'YOUR_RECAPTCHA_KEY';
+           
+           if (isMissingOrPlaceholder) {
+               // Log developer guidance to console
+               console.warn('⚠️ reCAPTCHA Enterprise site key is missing or invalid.');
+               console.warn('');
+               console.warn('To configure App Check with reCAPTCHA Enterprise:');
+               console.warn('1. Go to Firebase Console > Build > App Check');
+               console.warn('2. Register your web app and select "reCAPTCHA Enterprise" as the provider');
+               console.warn('3. Follow the setup wizard to create/select a reCAPTCHA Enterprise key');
+               console.warn('4. Enable reCAPTCHA Enterprise API in Google Cloud Console');
+               console.warn('5. Add your domain(s) to the allowed domains list');
+               console.warn('6. Update window.__recaptcha_site_key in index.html with your site key');
+               console.warn('');
+               console.warn('For secure deployment:');
+               console.warn('- Use CI/CD secrets to inject the key at deploy time');
+               console.warn('- Or use Firebase-managed App Check provider configuration');
+               console.warn('- DO NOT commit secret keys to version control');
+               console.warn('');
+               console.warn('Learn more: https://firebase.google.com/docs/app-check/web/recaptcha-enterprise-provider');
+               
+               // Add visible developer debug banner (hidden from screen readers)
+               const banner = document.createElement('div');
+               banner.setAttribute('aria-hidden', 'true');
+               banner.id = 'recaptcha-config-warning';
+               banner.className = 'fixed top-4 left-1/2 -translate-x-1/2 max-w-2xl mx-auto z-50 px-4';
+               banner.innerHTML = `
+                   <div class="bg-orange-900/30 border border-orange-500/50 rounded-2xl p-4 backdrop-blur-sm">
+                       <div class="flex items-start gap-3">
+                           <svg class="w-6 h-6 text-orange-400 flex-shrink-0 mt-0.5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                               <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M12 9v2m0 4h.01m-6.938 4h13.856c1.54 0 2.502-1.667 1.732-3L13.732 4c-.77-1.333-2.694-1.333-3.464 0L3.34 16c-.77 1.333.192 3 1.732 3z"/>
+                           </svg>
+                           <div class="flex-1 min-w-0">
+                               <h3 class="text-orange-400 font-bold text-sm mb-1">⚠️ Developer Notice: reCAPTCHA Key Missing</h3>
+                               <p class="text-orange-200/80 text-xs leading-relaxed mb-2">
+                                   The reCAPTCHA Enterprise site key is not configured. App Check will not function.
+                               </p>
+                               <div class="bg-slate-900/50 rounded-lg p-2 text-xs text-orange-100 space-y-1">
+                                   <div class="font-bold text-orange-300">Setup Instructions:</div>
+                                   <div>1. Firebase Console → Build → App Check</div>
+                                   <div>2. Register app with reCAPTCHA Enterprise provider</div>
+                                   <div>3. Enable reCAPTCHA Enterprise API & billing in Google Cloud</div>
+                                   <div>4. Add deployment domains to allowed domains list</div>
+                                   <div>5. Update window.__recaptcha_site_key in index.html</div>
+                                   <div class="text-[10px] text-orange-200/60 mt-1">
+                                       Check browser console for detailed guidance
+                                   </div>
+                               </div>
+                           </div>
+                           <button onclick="document.getElementById('recaptcha-config-warning').remove()" 
+                                   class="text-orange-400 hover:text-orange-300 transition-colors p-1" 
+                                   title="Dismiss warning">
+                               <svg class="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                                   <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M6 18L18 6M6 6l12 12"/>
+                               </svg>
+                           </button>
+                       </div>
+                   </div>
+               `;
+               
+               // Insert banner after page loads
+               if (document.body) {
+                   document.body.insertBefore(banner, document.body.firstChild);
+               } else {
+                   window.addEventListener('DOMContentLoaded', function() {
+                       document.body.insertBefore(banner, document.body.firstChild);
+                   });
+               }
+               
+               return; // Don't load the script if key is missing
+           }
+           
+           // Key is present - dynamically inject the reCAPTCHA Enterprise script
+           console.log('✓ Loading reCAPTCHA Enterprise script with provided site key...');
+           
+           const script = document.createElement('script');
+           script.src = `https://www.google.com/recaptcha/enterprise.js?render=${encodeURIComponent(siteKey)}`;
+           script.async = true;
+           script.defer = true;
+           
+           script.onload = function() {
+               console.log('✓ reCAPTCHA Enterprise script loaded successfully');
+           };
+           
+           script.onerror = function() {
+               console.error('❌ Failed to load reCAPTCHA Enterprise script');
+               console.error('Possible causes:');
+               console.error('  - Invalid site key');
+               console.error('  - Domain not authorized in reCAPTCHA Enterprise console');
+               console.error('  - Network connectivity issues');
+               console.error('  - reCAPTCHA Enterprise API not enabled in Google Cloud');
+               console.error('');
+               console.error('Verify your configuration at:');
+               console.error('  - Google Cloud Console > Security > reCAPTCHA Enterprise');
+               console.error('  - Firebase Console > Build > App Check');
+           };
+           
+           // Append to head
+           document.head.appendChild(script);
+       })();
     </script>
     
     <!-- Firebase + App Check initialization module -->
@@ -848,9 +992,40 @@
                 // Import getToken from App Check
                 const { getToken } = await import("https://www.gstatic.com/firebasejs/11.6.1/firebase-app-check.js");
                 
-                // Get App Check token
-                const appCheckTokenResponse = await getToken(window.fb.appCheck, /* forceRefresh */ false);
-                const appCheckToken = appCheckTokenResponse.token;
+                // Get App Check token with enhanced error handling
+                let appCheckToken;
+                try {
+                    const appCheckTokenResponse = await getToken(window.fb.appCheck, /* forceRefresh */ false);
+                    appCheckToken = appCheckTokenResponse.token;
+                } catch (tokenError) {
+                    console.error('❌ App Check token exchange failed:', tokenError);
+                    
+                    // Log detailed error information for 400 errors
+                    if (tokenError.message && (tokenError.message.includes('400') || tokenError.message.includes('Bad Request'))) {
+                        console.error('');
+                        console.error('🔍 App Check Token Exchange Failed (400 Bad Request)');
+                        console.error('');
+                        console.error('Troubleshooting steps:');
+                        console.error('  1. Verify domain authorization:');
+                        console.error('     → Google Cloud Console > Security > reCAPTCHA Enterprise');
+                        console.error('     → Ensure current domain (' + window.location.hostname + ') is in allowed domains');
+                        console.error('  2. Check API status:');
+                        console.error('     → Google Cloud Console > APIs & Services');
+                        console.error('     → Verify "reCAPTCHA Enterprise API" is enabled');
+                        console.error('  3. Verify billing:');
+                        console.error('     → reCAPTCHA Enterprise requires active billing on your GCP project');
+                        console.error('  4. Validate App Check configuration:');
+                        console.error('     → Firebase Console > Build > App Check');
+                        console.error('     → Verify provider is correctly configured for this app');
+                        console.error('');
+                        console.error('Error details:', tokenError.message);
+                        if (tokenError.stack) {
+                            console.error('Stack trace:', tokenError.stack);
+                        }
+                    }
+                    
+                    throw tokenError;
+                }
                 
                 console.log('Calling generateStory proxy endpoint with App Check token');
                 
@@ -917,9 +1092,40 @@
                 // Import getToken from App Check
                 const { getToken } = await import("https://www.gstatic.com/firebasejs/11.6.1/firebase-app-check.js");
                 
-                // Get App Check token
-                const appCheckTokenResponse = await getToken(window.fb.appCheck, /* forceRefresh */ false);
-                const appCheckToken = appCheckTokenResponse.token;
+                // Get App Check token with enhanced error handling
+                let appCheckToken;
+                try {
+                    const appCheckTokenResponse = await getToken(window.fb.appCheck, /* forceRefresh */ false);
+                    appCheckToken = appCheckTokenResponse.token;
+                } catch (tokenError) {
+                    console.error('❌ App Check token exchange failed:', tokenError);
+                    
+                    // Log detailed error information for 400 errors
+                    if (tokenError.message && (tokenError.message.includes('400') || tokenError.message.includes('Bad Request'))) {
+                        console.error('');
+                        console.error('🔍 App Check Token Exchange Failed (400 Bad Request)');
+                        console.error('');
+                        console.error('Troubleshooting steps:');
+                        console.error('  1. Verify domain authorization:');
+                        console.error('     → Google Cloud Console > Security > reCAPTCHA Enterprise');
+                        console.error('     → Ensure current domain (' + window.location.hostname + ') is in allowed domains');
+                        console.error('  2. Check API status:');
+                        console.error('     → Google Cloud Console > APIs & Services');
+                        console.error('     → Verify "reCAPTCHA Enterprise API" is enabled');
+                        console.error('  3. Verify billing:');
+                        console.error('     → reCAPTCHA Enterprise requires active billing on your GCP project');
+                        console.error('  4. Validate App Check configuration:');
+                        console.error('     → Firebase Console > Build > App Check');
+                        console.error('     → Verify provider is correctly configured for this app');
+                        console.error('');
+                        console.error('Error details:', tokenError.message);
+                        if (tokenError.stack) {
+                            console.error('Stack trace:', tokenError.stack);
+                        }
+                    }
+                    
+                    throw tokenError;
+                }
                 
                 console.log('Calling generateTTS proxy endpoint with App Check token');
                 
@@ -974,9 +1180,40 @@
                 // Import getToken from App Check
                 const { getToken } = await import("https://www.gstatic.com/firebasejs/11.6.1/firebase-app-check.js");
                 
-                // Get App Check token
-                const appCheckTokenResponse = await getToken(window.fb.appCheck, /* forceRefresh */ false);
-                const appCheckToken = appCheckTokenResponse.token;
+                // Get App Check token with enhanced error handling
+                let appCheckToken;
+                try {
+                    const appCheckTokenResponse = await getToken(window.fb.appCheck, /* forceRefresh */ false);
+                    appCheckToken = appCheckTokenResponse.token;
+                } catch (tokenError) {
+                    console.error('❌ App Check token exchange failed:', tokenError);
+                    
+                    // Log detailed error information for 400 errors
+                    if (tokenError.message && (tokenError.message.includes('400') || tokenError.message.includes('Bad Request'))) {
+                        console.error('');
+                        console.error('🔍 App Check Token Exchange Failed (400 Bad Request)');
+                        console.error('');
+                        console.error('Troubleshooting steps:');
+                        console.error('  1. Verify domain authorization:');
+                        console.error('     → Google Cloud Console > Security > reCAPTCHA Enterprise');
+                        console.error('     → Ensure current domain (' + window.location.hostname + ') is in allowed domains');
+                        console.error('  2. Check API status:');
+                        console.error('     → Google Cloud Console > APIs & Services');
+                        console.error('     → Verify "reCAPTCHA Enterprise API" is enabled');
+                        console.error('  3. Verify billing:');
+                        console.error('     → reCAPTCHA Enterprise requires active billing on your GCP project');
+                        console.error('  4. Validate App Check configuration:');
+                        console.error('     → Firebase Console > Build > App Check');
+                        console.error('     → Verify provider is correctly configured for this app');
+                        console.error('');
+                        console.error('Error details:', tokenError.message);
+                        if (tokenError.stack) {
+                            console.error('Stack trace:', tokenError.stack);
+                        }
+                    }
+                    
+                    throw tokenError;
+                }
                 
                 console.log('Calling generateImage proxy endpoint with App Check token');
                 
