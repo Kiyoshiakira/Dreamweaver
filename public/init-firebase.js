@@ -104,31 +104,8 @@ try {
                             try {
                                 console.log('⏳ Waiting for reCAPTCHA Enterprise API to be ready...');
                                 
-                                // Use the helper function if available, otherwise fallback to manual check
-                                let isReady = false;
-                                if (typeof window.__waitForReCaptchaEnterprise === 'function') {
-                                    isReady = await window.__waitForReCaptchaEnterprise(RECAPTCHA_WAIT_TIMEOUT_MS);
-                                } else {
-                                    // Fallback: manual polling for grecaptcha.enterprise
-                                    const POLL_INTERVAL_MS = 200; // Check every 200ms
-                                    const MAX_ATTEMPTS = RECAPTCHA_WAIT_TIMEOUT_MS / POLL_INTERVAL_MS;
-                                    let attempts = 0;
-                                    
-                                    while (attempts < MAX_ATTEMPTS) {
-                                        // Check for grecaptcha.enterprise.ready or grecaptcha.enterprise.execute
-                                        // Note: If execute exists, the API is ready even without ready() method
-                                        if (typeof grecaptcha !== 'undefined' && 
-                                            typeof grecaptcha.enterprise !== 'undefined' &&
-                                            (typeof grecaptcha.enterprise.ready === 'function' || 
-                                             typeof grecaptcha.enterprise.execute === 'function')) {
-                                            isReady = true;
-                                            break;
-                                        }
-                                        
-                                        await new Promise(resolve => setTimeout(resolve, POLL_INTERVAL_MS));
-                                        attempts++;
-                                    }
-                                }
+                                // Use the helper function from index.html
+                                const isReady = await window.__waitForReCaptchaEnterprise(RECAPTCHA_WAIT_TIMEOUT_MS);
                                 
                                 if (!isReady) {
                                     throw new Error('reCAPTCHA Enterprise API failed to load within timeout period');

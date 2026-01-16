@@ -241,6 +241,7 @@
            
            return new Promise((resolve) => {
                let attempts = 0;
+               let resolved = false; // Flag to prevent multiple resolutions
                
                const checkReady = () => {
                    // Check multiple possible API shapes
@@ -249,17 +250,26 @@
                        if (typeof grecaptcha.enterprise.ready === 'function') {
                            try {
                                grecaptcha.enterprise.ready(() => {
-                                   resolve(true);
+                                   if (!resolved) {
+                                       resolved = true;
+                                       resolve(true);
+                                   }
                                });
                            } catch (e) {
                                console.warn('Error calling grecaptcha.enterprise.ready:', e);
-                               resolve(false);
+                               if (!resolved) {
+                                   resolved = true;
+                                   resolve(false);
+                               }
                            }
                            return;
                        }
                        // Check for grecaptcha.enterprise.execute (API is ready if execute exists)
                        if (typeof grecaptcha.enterprise.execute === 'function') {
-                           resolve(true);
+                           if (!resolved) {
+                               resolved = true;
+                               resolve(true);
+                           }
                            return;
                        }
                    }
@@ -268,11 +278,17 @@
                    if (typeof grecaptcha !== 'undefined' && typeof grecaptcha.ready === 'function') {
                        try {
                            grecaptcha.ready(() => {
-                               resolve(true);
+                               if (!resolved) {
+                                   resolved = true;
+                                   resolve(true);
+                               }
                            });
                        } catch (e) {
                            console.warn('Error calling grecaptcha.ready:', e);
-                           resolve(false);
+                           if (!resolved) {
+                               resolved = true;
+                               resolve(false);
+                           }
                        }
                        return;
                    }
@@ -283,7 +299,10 @@
                        setTimeout(checkReady, POLL_INTERVAL_MS);
                    } else {
                        // Timeout - resolve false
-                       resolve(false);
+                       if (!resolved) {
+                           resolved = true;
+                           resolve(false);
+                       }
                    }
                };
                
