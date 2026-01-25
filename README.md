@@ -302,6 +302,118 @@ For more detailed documentation, please visit the [Wiki](../../wiki):
 
 ---
 
+## 🔧 Troubleshooting
+
+### Common Issues and Solutions
+
+#### Story Generation / TTS / Image Generation Failures
+
+**Symptoms:**
+- Error messages like "Story Generation Failed", "Text-to-Speech Failed", or "Image Generation Failed"
+- Banners showing "Firebase not configured" or "App Check verification failed"
+
+**Solutions:**
+
+1. **API Key Not Configured**
+   - **For local development:**
+     ```bash
+     cd server/functions
+     cp .env.example .env
+     # Edit .env and add your API key
+     ```
+   - **For production:**
+     ```bash
+     firebase functions:config:set genai.key="YOUR_GOOGLE_GEMINI_API_KEY"
+     firebase deploy --only functions
+     ```
+   - Get your API key from: https://aistudio.google.com/app/apikey
+
+2. **App Check Verification Failed**
+   - Verify reCAPTCHA v3 site key is correctly configured in `public/index.html`
+   - Ensure reCAPTCHA Enterprise API is enabled in Google Cloud Console
+   - Check that your domain is in the allowed domains list in reCAPTCHA settings
+   - Verify Firebase App Check provider is properly configured
+   - Ensure billing is enabled for reCAPTCHA Enterprise
+
+3. **Rate Limiting / Timeout Errors**
+   - The system automatically retries failed requests (up to 3 times with exponential backoff)
+   - Wait a few moments and the system will automatically retry
+   - If rate limits persist, consider:
+     - Spacing out image generation requests (already implemented with 1-second delays)
+     - Upgrading your API quota in Google Cloud Console
+
+4. **Network Errors**
+   - Check your internet connection
+   - Verify Firebase Functions are deployed and accessible
+   - Check Firebase Functions logs: `firebase functions:log`
+
+5. **Request Timeouts**
+   - Backend requests have a 30-second timeout
+   - If requests consistently timeout:
+     - Check Firebase Functions performance metrics
+     - Verify API key is valid and has sufficient quota
+     - Consider upgrading Firebase plan for better performance
+
+#### Firebase Configuration Issues
+
+**Symptoms:**
+- "Firebase configuration is required" errors
+- App fails to initialize
+
+**Solutions:**
+
+1. Verify Firebase config in `public/index.html` (lines 226-248):
+   ```javascript
+   const __firebase_config = JSON.stringify({
+       apiKey: "YOUR_FIREBASE_API_KEY",
+       authDomain: "your-project.firebaseapp.com",
+       projectId: "your-project-id",
+       // ...
+   });
+   ```
+
+2. Run the configuration verification script:
+   ```bash
+   ./verify-firebase-config.sh
+   ```
+
+3. Follow the [Firebase Deployment Guide](FIREBASE_DEPLOYMENT_GUIDE.md) for complete setup instructions
+
+#### Image Generation Slow or Failing
+
+**Symptoms:**
+- Images not appearing during story playback
+- Slow image transitions
+
+**Solutions:**
+
+1. **Image generation is optimized:**
+   - Images pre-generate in background before narration reaches them
+   - Failed image generation doesn't block story flow
+   - System automatically retries failed images (up to 2 times)
+
+2. **If images consistently fail:**
+   - Check API key has sufficient quota for image generation
+   - Verify network connection is stable
+   - Check Firebase Functions logs for specific error details
+
+3. **Performance tips:**
+   - Images are cached during the session
+   - 1-second delay between sequential image requests prevents API overload
+   - Pre-generation happens while previous chapter is being read
+
+### Debug Tools
+
+For detailed troubleshooting, use the **Debug & Testing Area**:
+- Navigate to `debug.html` or add `?debug=true` to the main URL
+- Test individual AI functions (story, TTS, image generation)
+- Monitor API calls with detailed timing and response data
+- View real-time logging with verbose mode
+
+See [DEBUG.md](DEBUG.md) for complete documentation.
+
+---
+
 ## 🐛 Known Issues
 
 - Requires valid API keys to function
