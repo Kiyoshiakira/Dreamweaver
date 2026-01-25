@@ -1121,6 +1121,58 @@
         }
         
         /**
+         * Retry wrapper for API calls with exponential backoff
+         * @param {Function} fn - Async function to retry
+         * @param {Object} options - Retry options
+         * @returns {Promise<any>} - Result of successful call
+         */
+        async function retryWithBackoff(fn, options = {}) {
+            const {
+                maxRetries = 3,
+                initialDelayMs = 1000,
+                maxDelayMs = 10000,
+                operationName = 'Operation'
+            } = options;
+            
+            let lastError;
+            
+            for (let attempt = 0; attempt <= maxRetries; attempt++) {
+                try {
+                    return await fn();
+                } catch (error) {
+                    lastError = error;
+                    
+                    // Check if error is retryable based on backend response
+                    const isRetryable = error.retryable || 
+                                       error.message?.includes('timeout') ||
+                                       error.message?.includes('network') ||
+                                       error.statusCode === 429 ||
+                                       error.statusCode >= 500;
+                    
+                    if (!isRetryable || attempt === maxRetries) {
+                        console.error(`${operationName} failed after ${attempt + 1} attempts:`, error.message);
+                        throw error;
+                    }
+                    
+                    // Calculate delay with exponential backoff
+                    const delay = Math.min(
+                        initialDelayMs * Math.pow(2, attempt),
+                        maxDelayMs
+                    );
+                    
+                    console.warn(
+                        `${operationName} attempt ${attempt + 1} failed: ${error.message}. ` +
+                        `Retrying in ${delay}ms...`
+                    );
+                    
+                    await new Promise(resolve => setTimeout(resolve, delay));
+                }
+            }
+            
+            throw lastError;
+        }
+        
+        /**
          * Helper function to call the Firebase proxy for story generation
          * Acquires an App Check token and POSTs to the generateStory endpoint
          * 
@@ -1160,16 +1212,23 @@
                 if (!response.ok) {
                     const errorData = await response.json().catch(() => ({ error: 'Unknown error' }));
                     
+                    // Create error with retryable flag and status code from backend
+                    const error = new Error();
+                    error.statusCode = response.status;
+                    error.retryable = errorData.retryable || false;
+                    
                     // Provide helpful error messages based on status code
                     if (response.status === 403) {
-                        throw new Error(`PROXY_AUTH_FAILED: ${errorData.details || 'App Check verification failed'}`);
-                    } else if (response.status === 502) {
-                        throw new Error(`PROXY_UPSTREAM_ERROR: ${errorData.details || 'Upstream API error'}`);
+                        error.message = `PROXY_AUTH_FAILED: ${errorData.details || 'App Check verification failed'}`;
+                    } else if (response.status === 502 || response.status === 504) {
+                        error.message = `PROXY_UPSTREAM_ERROR: ${errorData.details || 'Upstream API error'}`;
                     } else if (response.status === 500) {
-                        throw new Error(`PROXY_SERVER_ERROR: ${errorData.details || 'Internal server error'}`);
+                        error.message = `PROXY_SERVER_ERROR: ${errorData.details || 'Internal server error'}`;
                     } else {
-                        throw new Error(`PROXY_ERROR: ${errorData.error || `HTTP ${response.status}`}`);
+                        error.message = `PROXY_ERROR: ${errorData.error || `HTTP ${response.status}`}`;
                     }
+                    
+                    throw error;
                 }
                 
                 const data = await response.json();
@@ -1236,7 +1295,13 @@
                 
                 if (!response.ok) {
                     const errorData = await response.json().catch(() => ({ error: 'Unknown error' }));
-                    throw new Error(`TTS_PROXY_ERROR: ${errorData.details || errorData.error || `HTTP ${response.status}`}`);
+                    
+                    // Create error with retryable flag and status code from backend
+                    const error = new Error(`TTS_PROXY_ERROR: ${errorData.details || errorData.error || `HTTP ${response.status}`}`);
+                    error.statusCode = response.status;
+                    error.retryable = errorData.retryable || false;
+                    
+                    throw error;
                 }
                 
                 const data = await response.json();
@@ -1298,7 +1363,13 @@
                 
                 if (!response.ok) {
                     const errorData = await response.json().catch(() => ({ error: 'Unknown error' }));
-                    throw new Error(`IMAGE_PROXY_ERROR: ${errorData.details || errorData.error || `HTTP ${response.status}`}`);
+                    
+                    // Create error with retryable flag and status code from backend
+                    const error = new Error(`IMAGE_PROXY_ERROR: ${errorData.details || errorData.error || `HTTP ${response.status}`}`);
+                    error.statusCode = response.status;
+                    error.retryable = errorData.retryable || false;
+                    
+                    throw error;
                 }
                 
                 const data = await response.json();
@@ -2076,7 +2147,13 @@
                 }
                 
                 console.log('Using Firebase proxy for story generation');
-                const data = await callGenerateProxy(promptText, sys);
+                
+                // Wrap in retry logic
+                const data = await retryWithBackoff(
+                    async () => await callGenerateProxy(promptText, sys),
+                    { operationName: 'Story Generation', maxRetries: 3 }
+                );
+                
                 console.log('✓ Successfully used Firebase proxy');
                 
                 // Validate response structure
@@ -2281,7 +2358,12 @@
                 }
                 
                 console.log('Using Firebase proxy for TTS');
-                const data = await callTTSProxy(text, state.voice, state.accent);
+                
+                // Wrap in retry logic
+                const data = await retryWithBackoff(
+                    async () => await callTTSProxy(text, state.voice, state.accent),
+                    { operationName: 'TTS Generation', maxRetries: 3 }
+                );
                 
                 // Validate response structure
                 validateTTSResponse(data);
@@ -2585,7 +2667,12 @@
                 }
                 
                 const prompt = `Cinematic professional fantasy art, atmospheric, ${state.genre} style: ${promptText}`;
-                const data = await callImageProxy(prompt);
+                
+                // Wrap in retry logic
+                const data = await retryWithBackoff(
+                    async () => await callImageProxy(prompt),
+                    { operationName: 'Image Generation', maxRetries: 2 } // Fewer retries for images
+                );
                 
                 // Validate response structure
                 if (!data || !data.candidates || !data.candidates[0] || 
@@ -2599,6 +2686,7 @@
                 console.log(`Pre-generated image for sentence ${sentenceIdx}`);
             } catch (err) {
                 console.error(`Failed to pre-generate image for sentence ${sentenceIdx}:`, err);
+                // Image generation failures shouldn't block the story flow
             }
         }
 
