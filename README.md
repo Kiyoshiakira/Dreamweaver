@@ -78,8 +78,18 @@ Dreamweaver is a single-page web application that combines multiple AI technolog
 ### Prerequisites
 - A modern web browser (Chrome, Firefox, Safari, or Edge)
 - Google Gemini API key (for story generation and TTS)
-- Firebase configuration (optional, for secure API proxy and user management)
+- Firebase project with Functions enabled (for secure API proxy)
 - Spotify Developer account (optional, for Spotify integration)
+
+### 🔒 Security Architecture
+
+**IMPORTANT:** Dreamweaver uses a secure proxy architecture where:
+- ✅ AI API keys are stored ONLY in Firebase Functions (`.env` file or Firebase config)
+- ✅ Frontend code NEVER has direct access to AI API keys
+- ✅ All AI requests go through Firebase Functions proxies
+- ✅ API keys are NEVER exposed to the browser or committed to git
+
+See [API_CONNECTION_GUIDE.md](API_CONNECTION_GUIDE.md) for complete details.
 
 ### Installation
 
@@ -95,9 +105,10 @@ Dreamweaver is a single-page web application that combines multiple AI technolog
    
    **Quick verification**: Run `./verify-firebase-config.sh` to check your setup.
    
-   **📖 Complete deployment guide**: See [FIREBASE_DEPLOYMENT_GUIDE.md](FIREBASE_DEPLOYMENT_GUIDE.md) for:
-   - Manual deployment via Firebase CLI
-   - Automated deployment via GitHub Actions
+   **📖 Complete setup guides**:
+   - [API_CONNECTION_GUIDE.md](API_CONNECTION_GUIDE.md) - How AI connects securely via .env
+   - [FIREBASE_DEPLOYMENT_GUIDE.md](FIREBASE_DEPLOYMENT_GUIDE.md) - Deployment via Firebase CLI
+   - [server/README.md](server/README.md) - Firebase Functions setup
    - Troubleshooting common issues
    - Project configuration verification
 
@@ -105,29 +116,42 @@ Dreamweaver is a single-page web application that combines multiple AI technolog
    
    **⚠️ SECURITY WARNING**: Never commit API keys to version control!
    
-   **Option A: Firebase Proxy Setup (Recommended for ALL deployments)**
+   **Secure API Connection** (Required)
    
-   This method keeps your API key secure on the server side:
+   Dreamweaver uses a secure proxy architecture. Your API key is stored ONLY in Firebase Functions:
    
-   1. Follow the [Firebase Proxy Setup Guide](server/README.md)
-   2. Configure Firebase Cloud Functions with your API key:
+   1. Get your API key from [Google AI Studio](https://aistudio.google.com/app/apikey)
+   
+   2. **For Local Development:**
       ```bash
-      firebase functions:config:set genai.key="YOUR_GOOGLE_GEMINI_API_KEY"
+      cd server/functions
+      cp .env.example .env
+      # Edit .env and add: DREAMWEAVER_APIKEY=your_api_key_here
       ```
-   3. Update Firebase config in `public/index.html` (lines 226-248):
+   
+   3. **For Production Deployment:**
+      ```bash
+      firebase functions:config:set genai.key="YOUR_API_KEY"
+      firebase deploy --only functions
+      ```
+   
+   4. Configure Firebase config in `public/index.html` (lines ~62-70):
       ```javascript
-      const __firebase_config = JSON.stringify({
-          apiKey: "YOUR_FIREBASE_API_KEY",
+      window.__firebase_config = JSON.stringify({
+          apiKey: "YOUR_FIREBASE_API_KEY",  // This is your Firebase key, NOT Gemini key
           authDomain: "your-project.firebaseapp.com",
           projectId: "your-project-id",
           // ... other Firebase config
       });
-      const __recaptcha_site_key = "YOUR_RECAPTCHA_V3_SITE_KEY";
       ```
    
-   **IMPORTANT**: Firebase Cloud Functions setup is REQUIRED. The application does not support direct API calls for security reasons.
+   **✅ What this achieves:**
+   - API key is NEVER exposed to the browser
+   - API key is NEVER in version control
+   - All AI requests go through secure Firebase Functions
+   - Safe to use `firebase deploy` and `git pull`
    
-   All API calls (story generation, text-to-speech, image generation) are routed through secure Firebase Cloud Functions.
+   See [API_CONNECTION_GUIDE.md](API_CONNECTION_GUIDE.md) for complete details.
 
 3. **Set up Spotify Integration (Optional)**:
    - Go to [Spotify Developer Dashboard](https://developer.spotify.com/dashboard)
