@@ -11,6 +11,14 @@ const fetch = require('node-fetch');
 // Initialize Firebase Admin SDK
 admin.initializeApp();
 
+// Configuration constants
+const RETRY_CONFIG = {
+  maxRetries: 3,
+  initialDelayMs: 1000,
+  maxDelayMs: 10000,
+  timeoutMs: 30000, // 30 second timeout
+};
+
 /**
  * Helper function to get API key from multiple sources
  * Priority order:
@@ -25,6 +33,100 @@ function getApiKey() {
   
   // Fallback to environment variables
   return configKey || process.env.DREAMWEAVER_APIKEY || process.env.GEN_API_KEY || process.env.GENAI_KEY;
+}
+
+/**
+ * Helper function to determine if an error is retryable
+ * @param {number} statusCode - HTTP status code
+ * @param {object} error - Error object
+ * @returns {boolean} - True if error is retryable
+ */
+function isRetryableError(statusCode, error) {
+  // Retry on rate limits, server errors, and network issues
+  const retryableStatusCodes = [429, 500, 502, 503, 504];
+  
+  // Also retry on network/timeout errors
+  const networkErrors = ['ECONNRESET', 'ETIMEDOUT', 'ENOTFOUND', 'ECONNREFUSED'];
+  const isNetworkError = error && networkErrors.includes(error.code);
+  
+  return retryableStatusCodes.includes(statusCode) || isNetworkError;
+}
+
+/**
+ * Sleep helper for delays
+ * @param {number} ms - Milliseconds to sleep
+ */
+function sleep(ms) {
+  return new Promise(resolve => setTimeout(resolve, ms));
+}
+
+/**
+ * Fetch with timeout support
+ * @param {string} url - URL to fetch
+ * @param {object} options - Fetch options
+ * @param {number} timeoutMs - Timeout in milliseconds
+ * @returns {Promise<Response>}
+ */
+async function fetchWithTimeout(url, options, timeoutMs) {
+  const controller = new AbortController();
+  const timeout = setTimeout(() => controller.abort(), timeoutMs);
+  
+  try {
+    const response = await fetch(url, {
+      ...options,
+      signal: controller.signal
+    });
+    clearTimeout(timeout);
+    return response;
+  } catch (error) {
+    clearTimeout(timeout);
+    if (error.name === 'AbortError') {
+      throw new Error('Request timeout');
+    }
+    throw error;
+  }
+}
+
+/**
+ * Retry wrapper with exponential backoff
+ * @param {Function} fn - Async function to retry
+ * @param {string} operationName - Name of operation for logging
+ * @returns {Promise<any>} - Result of successful operation
+ */
+async function retryWithBackoff(fn, operationName) {
+  let lastError;
+  
+  for (let attempt = 0; attempt <= RETRY_CONFIG.maxRetries; attempt++) {
+    try {
+      return await fn();
+    } catch (error) {
+      lastError = error;
+      
+      // Check if we should retry
+      const statusCode = error.statusCode || error.response?.status;
+      const shouldRetry = isRetryableError(statusCode, error);
+      
+      if (!shouldRetry || attempt === RETRY_CONFIG.maxRetries) {
+        console.error(`${operationName} failed after ${attempt + 1} attempts:`, error.message);
+        throw error;
+      }
+      
+      // Calculate delay with exponential backoff
+      const delay = Math.min(
+        RETRY_CONFIG.initialDelayMs * Math.pow(2, attempt),
+        RETRY_CONFIG.maxDelayMs
+      );
+      
+      console.warn(
+        `${operationName} attempt ${attempt + 1} failed (${error.message}). ` +
+        `Retrying in ${delay}ms...`
+      );
+      
+      await sleep(delay);
+    }
+  }
+  
+  throw lastError;
 }
 
 /**
@@ -70,6 +172,84 @@ function handleCORS(req, res) {
   }
   
   return false;
+}
+
+/**
+ * Helper function to validate API response structure
+ * @param {object} data - Response data from API
+ * @param {string} apiType - Type of API (story, tts, image) for error messages
+ * @param {object} validationConfig - Configuration for validation
+ * @returns {void}
+ * @throws {Error} - If validation fails
+ */
+function validateApiResponse(data, apiType, validationConfig = {}) {
+  const { requireContent = false, requireInlineData = false } = validationConfig;
+  
+  // Check basic response structure
+  if (!data || !data.candidates || !Array.isArray(data.candidates) || data.candidates.length === 0) {
+    console.error(`Invalid response from upstream ${apiType} API:`, data);
+    const error = new Error(`${apiType} API response missing expected data`);
+    error.statusCode = 502;
+    throw error;
+  }
+  
+  // Check for content if required
+  if (requireContent && (!data.candidates[0].content || !data.candidates[0].content.parts)) {
+    console.error(`Invalid response structure from upstream ${apiType} API:`, data);
+    const error = new Error(`${apiType} API response missing content parts`);
+    error.statusCode = 502;
+    throw error;
+  }
+  
+  // Check for inline data if required (for TTS and Image)
+  if (requireInlineData && (!data.candidates[0].content || !data.candidates[0].content.parts || 
+      !data.candidates[0].content.parts[0].inlineData)) {
+    console.error(`Invalid response structure from upstream ${apiType} API:`, data);
+    const error = new Error(`${apiType} API response missing inline data`);
+    error.statusCode = 502;
+    throw error;
+  }
+}
+
+/**
+ * Helper function to handle error responses consistently
+ * @param {object} res - Express response object
+ * @param {object} error - Error object
+ * @param {string} functionName - Name of the function for logging
+ */
+function handleErrorResponse(res, error, functionName) {
+  if (error.message === 'APP_CHECK_MISSING') {
+    res.status(403).json({ 
+      error: 'App Check verification required',
+      details: 'Missing App Check token'
+    });
+  } else if (error.message.startsWith('APP_CHECK_FAILED')) {
+    res.status(403).json({ 
+      error: 'App Check verification failed',
+      details: error.message.replace('APP_CHECK_FAILED: ', '')
+    });
+  } else if (error.statusCode) {
+    // Error with specific status code from upstream API
+    res.status(error.statusCode >= 500 ? 502 : error.statusCode).json({ 
+      error: 'Upstream API error',
+      details: error.message,
+      statusCode: error.statusCode,
+      retryable: isRetryableError(error.statusCode, error)
+    });
+  } else if (error.message === 'Request timeout') {
+    res.status(504).json({ 
+      error: 'Request timeout',
+      details: `The ${functionName} API request took too long to respond`,
+      retryable: true
+    });
+  } else {
+    console.error(`Unexpected error in ${functionName} function:`, error);
+    res.status(500).json({ 
+      error: 'Internal server error',
+      details: error.message,
+      retryable: false
+    });
+  }
 }
 
 /**
@@ -152,63 +332,43 @@ exports.generateStory = functions.https.onRequest(async (req, res) => {
       };
     }
     
-    // Forward request to Google Generative Language API
+    // Forward request to Google Generative Language API with retry logic
     const apiUrl = `https://generativelanguage.googleapis.com/v1beta/models/gemini-3-flash-preview:generateContent?key=${apiKey}`;
     
     console.log('Forwarding story generation request to Generative Language API');
-    const apiResponse = await fetch(apiUrl, {
-      method: 'POST',
-      headers: { 'Content-Type': 'application/json' },
-      body: JSON.stringify(requestBody)
-    });
     
-    // Check if API request was successful
-    if (!apiResponse.ok) {
-      const errorText = await apiResponse.text();
-      console.error(`Upstream API error (${apiResponse.status}):`, errorText);
+    const responseData = await retryWithBackoff(async () => {
+      const apiResponse = await fetchWithTimeout(apiUrl, {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify(requestBody)
+      }, RETRY_CONFIG.timeoutMs);
       
-      res.status(502).json({ 
-        error: 'Upstream API error',
-        details: `API returned ${apiResponse.status}`,
-        statusCode: apiResponse.status
-      });
-      return;
-    }
-    
-    // Parse and return response
-    const responseData = await apiResponse.json();
-    
-    // Validate response structure
-    if (!responseData || !responseData.candidates) {
-      console.error('Invalid response from upstream API:', responseData);
-      res.status(502).json({ 
-        error: 'Invalid upstream response',
-        details: 'API response missing expected data'
-      });
-      return;
-    }
+      // Check if API request was successful
+      if (!apiResponse.ok) {
+        const errorText = await apiResponse.text();
+        console.error(`Upstream API error (${apiResponse.status}):`, errorText);
+        
+        const error = new Error(`API returned ${apiResponse.status}`);
+        error.statusCode = apiResponse.status;
+        error.details = errorText;
+        throw error;
+      }
+      
+      // Parse response
+      const data = await apiResponse.json();
+      
+      // Validate response structure using helper
+      validateApiResponse(data, 'Story', { requireContent: true });
+      
+      return data;
+    }, 'Story Generation');
     
     console.log('Successfully proxied story generation request');
     res.status(200).json(responseData);
     
   } catch (error) {
-    if (error.message === 'APP_CHECK_MISSING') {
-      res.status(403).json({ 
-        error: 'App Check verification required',
-        details: 'Missing App Check token'
-      });
-    } else if (error.message.startsWith('APP_CHECK_FAILED')) {
-      res.status(403).json({ 
-        error: 'App Check verification failed',
-        details: error.message.replace('APP_CHECK_FAILED: ', '')
-      });
-    } else {
-      console.error('Unexpected error in generateStory function:', error);
-      res.status(500).json({ 
-        error: 'Internal server error',
-        details: error.message
-      });
-    }
+    handleErrorResponse(res, error, 'generateStory');
   }
 });
 
@@ -283,63 +443,43 @@ exports.generateTTS = functions.https.onRequest(async (req, res) => {
       }
     };
     
-    // Forward request to Google Generative Language API
+    // Forward request to Google Generative Language API with retry logic
     const apiUrl = `https://generativelanguage.googleapis.com/v1beta/models/gemini-2.5-flash-preview-tts:generateContent?key=${apiKey}`;
     
     console.log('Forwarding TTS request to Generative Language API');
-    const apiResponse = await fetch(apiUrl, {
-      method: 'POST',
-      headers: { 'Content-Type': 'application/json' },
-      body: JSON.stringify(requestBody)
-    });
     
-    // Check if API request was successful
-    if (!apiResponse.ok) {
-      const errorText = await apiResponse.text();
-      console.error(`Upstream TTS API error (${apiResponse.status}):`, errorText);
+    const responseData = await retryWithBackoff(async () => {
+      const apiResponse = await fetchWithTimeout(apiUrl, {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify(requestBody)
+      }, RETRY_CONFIG.timeoutMs);
       
-      res.status(502).json({ 
-        error: 'Upstream API error',
-        details: `TTS API returned ${apiResponse.status}`,
-        statusCode: apiResponse.status
-      });
-      return;
-    }
-    
-    // Parse and return response
-    const responseData = await apiResponse.json();
-    
-    // Validate response structure
-    if (!responseData || !responseData.candidates) {
-      console.error('Invalid response from upstream TTS API:', responseData);
-      res.status(502).json({ 
-        error: 'Invalid upstream response',
-        details: 'TTS API response missing expected data'
-      });
-      return;
-    }
+      // Check if API request was successful
+      if (!apiResponse.ok) {
+        const errorText = await apiResponse.text();
+        console.error(`Upstream TTS API error (${apiResponse.status}):`, errorText);
+        
+        const error = new Error(`TTS API returned ${apiResponse.status}`);
+        error.statusCode = apiResponse.status;
+        error.details = errorText;
+        throw error;
+      }
+      
+      // Parse response
+      const data = await apiResponse.json();
+      
+      // Validate response structure using helper
+      validateApiResponse(data, 'TTS', { requireInlineData: true });
+      
+      return data;
+    }, 'TTS Generation');
     
     console.log('Successfully proxied TTS request');
     res.status(200).json(responseData);
     
   } catch (error) {
-    if (error.message === 'APP_CHECK_MISSING') {
-      res.status(403).json({ 
-        error: 'App Check verification required',
-        details: 'Missing App Check token'
-      });
-    } else if (error.message.startsWith('APP_CHECK_FAILED')) {
-      res.status(403).json({ 
-        error: 'App Check verification failed',
-        details: error.message.replace('APP_CHECK_FAILED: ', '')
-      });
-    } else {
-      console.error('Unexpected error in generateTTS function:', error);
-      res.status(500).json({ 
-        error: 'Internal server error',
-        details: error.message
-      });
-    }
+    handleErrorResponse(res, error, 'generateTTS');
   }
 });
 
@@ -400,62 +540,42 @@ exports.generateImage = functions.https.onRequest(async (req, res) => {
       }]
     };
     
-    // Forward request to Google Generative Language API
+    // Forward request to Google Generative Language API with retry logic
     const apiUrl = `https://generativelanguage.googleapis.com/v1beta/models/gemini-2.5-flash-image:generateContent?key=${apiKey}`;
     
     console.log('Forwarding image generation request to Generative Language API');
-    const apiResponse = await fetch(apiUrl, {
-      method: 'POST',
-      headers: { 'Content-Type': 'application/json' },
-      body: JSON.stringify(requestBody)
-    });
     
-    // Check if API request was successful
-    if (!apiResponse.ok) {
-      const errorText = await apiResponse.text();
-      console.error(`Upstream Image API error (${apiResponse.status}):`, errorText);
+    const responseData = await retryWithBackoff(async () => {
+      const apiResponse = await fetchWithTimeout(apiUrl, {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify(requestBody)
+      }, RETRY_CONFIG.timeoutMs);
       
-      res.status(502).json({ 
-        error: 'Upstream API error',
-        details: `Image API returned ${apiResponse.status}`,
-        statusCode: apiResponse.status
-      });
-      return;
-    }
-    
-    // Parse and return response
-    const responseData = await apiResponse.json();
-    
-    // Validate response structure
-    if (!responseData || !responseData.candidates) {
-      console.error('Invalid response from upstream Image API:', responseData);
-      res.status(502).json({ 
-        error: 'Invalid upstream response',
-        details: 'Image API response missing expected data'
-      });
-      return;
-    }
+      // Check if API request was successful
+      if (!apiResponse.ok) {
+        const errorText = await apiResponse.text();
+        console.error(`Upstream Image API error (${apiResponse.status}):`, errorText);
+        
+        const error = new Error(`Image API returned ${apiResponse.status}`);
+        error.statusCode = apiResponse.status;
+        error.details = errorText;
+        throw error;
+      }
+      
+      // Parse response
+      const data = await apiResponse.json();
+      
+      // Validate response structure using helper
+      validateApiResponse(data, 'Image', { requireInlineData: true });
+      
+      return data;
+    }, 'Image Generation');
     
     console.log('Successfully proxied image generation request');
     res.status(200).json(responseData);
     
   } catch (error) {
-    if (error.message === 'APP_CHECK_MISSING') {
-      res.status(403).json({ 
-        error: 'App Check verification required',
-        details: 'Missing App Check token'
-      });
-    } else if (error.message.startsWith('APP_CHECK_FAILED')) {
-      res.status(403).json({ 
-        error: 'App Check verification failed',
-        details: error.message.replace('APP_CHECK_FAILED: ', '')
-      });
-    } else {
-      console.error('Unexpected error in generateImage function:', error);
-      res.status(500).json({ 
-        error: 'Internal server error',
-        details: error.message
-      });
-    }
+    handleErrorResponse(res, error, 'generateImage');
   }
 });

@@ -48,6 +48,31 @@ All functions:
 - Forward requests to Google's Generative Language API using a server-side key
 - Return sanitized responses to the client
 - Are accessible via Firebase Hosting rewrites at `/generateStory`, `/generateTTS`, and `/generateImage`
+- **Include automatic retry logic with exponential backoff** for transient failures
+- **Have request timeout protection** (30 seconds) to prevent hanging requests
+- **Return detailed error information** including retryable flags for better error handling
+
+### Retry and Timeout Features
+
+The Cloud Functions include built-in resilience features:
+
+**Automatic Retry Logic:**
+- Retries transient failures automatically (rate limits, server errors, network issues)
+- Uses exponential backoff: 1s → 2s → 4s (max 10s between retries)
+- Up to 3 retry attempts per request
+- Retries on status codes: 429, 500, 502, 503, 504
+- Retries on network errors: ECONNRESET, ETIMEDOUT, ENOTFOUND, ECONNREFUSED
+
+**Request Timeout Protection:**
+- All API requests have a 30-second timeout
+- Prevents hanging requests from consuming resources
+- Returns clear timeout errors for client-side handling
+
+**Enhanced Error Responses:**
+- All errors include a `retryable` flag indicating if retry is recommended
+- Status codes preserved for proper error categorization
+- Detailed error messages for debugging
+- Separate error types for different failure scenarios (auth, upstream, server)
 
 ## Prerequisites
 
@@ -332,6 +357,27 @@ firebase functions:log --only generateStory
    - Quota limits
 
 ## Troubleshooting
+
+### Automatic Retry and Timeout Behavior
+
+The functions now include automatic retry logic. When you encounter errors:
+
+1. **Retryable errors** (429, 500, 502, 503, 504, network errors):
+   - The function automatically retries up to 3 times
+   - Uses exponential backoff (1s, 2s, 4s delays)
+   - You'll see retry messages in the logs
+   - Frontend also implements client-side retries for additional resilience
+
+2. **Timeout errors** (504):
+   - Requests timeout after 30 seconds
+   - Indicates the upstream API is slow or unresponsive
+   - Check Google AI Studio status for API issues
+   - Monitor function execution time in Firebase Console
+
+3. **Non-retryable errors** (400, 403):
+   - Configuration or authentication issues
+   - Won't retry automatically
+   - Fix the underlying issue (API key, App Check, etc.)
 
 ### Function returns 403 "App Check verification required"
 
