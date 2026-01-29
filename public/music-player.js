@@ -273,7 +273,7 @@ const MusicPlayer = (function () {
       window.updateReaderPlaylistDisplay();
     }
     
-    // Update tally display if visible
+    // Update tally display if function is available
     if (typeof window !== 'undefined' && window.updateTallyDisplay) {
       window.updateTallyDisplay();
     }

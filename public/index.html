@@ -630,7 +630,7 @@
                         <div class="flex items-center justify-between mb-2">
                             <div class="flex items-center gap-3">
                                 <div class="w-10 h-10 bg-indigo-500/20 rounded-xl flex items-center justify-center text-indigo-400">
-                                    <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
+                                    <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" aria-hidden="true">
                                         <path d="M9 18V5l12-2v13"></path>
                                         <circle cx="6" cy="18" r="3"></circle>
                                         <circle cx="18" cy="16" r="3"></circle>
@@ -641,8 +641,8 @@
                                     <p class="text-indigo-300 text-[10px]">Organize your music collection</p>
                                 </div>
                             </div>
-                            <button id="toggle-tally-btn" onclick="toggleTallyDisplay()" class="px-3 py-1 bg-slate-700 hover:bg-slate-600 rounded-lg font-bold text-xs transition-all active:scale-95 flex items-center gap-1" title="Toggle tally view to see collection statistics">
-                                <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
+                            <button id="toggle-tally-btn" onclick="toggleTallyDisplay()" class="px-3 py-1 bg-slate-700 hover:bg-slate-600 rounded-lg font-bold text-xs transition-all active:scale-95 flex items-center gap-1" title="Toggle tally view to see collection statistics" aria-label="Toggle tally display">
+                                <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" aria-hidden="true">
                                     <path d="M3 3v18h18"></path>
                                     <path d="M18 17V9"></path>
                                     <path d="M13 17V5"></path>
@@ -653,18 +653,18 @@
                         </div>
                         
                         <!-- Tally Display (hidden by default) -->
-                        <div id="tally-display" class="hidden p-4 bg-gradient-to-r from-indigo-900/50 to-purple-900/50 border border-indigo-500/30 rounded-xl">
+                        <div id="tally-display" class="hidden p-4 bg-gradient-to-r from-indigo-900/50 to-purple-900/50 border border-indigo-500/30 rounded-xl" role="region" aria-label="Playlist Statistics">
                             <div class="grid grid-cols-3 gap-4">
                                 <div class="text-center">
-                                    <div class="text-2xl font-black text-indigo-300" id="tally-total-playlists">0</div>
+                                    <div class="text-2xl font-black text-indigo-300" id="tally-total-playlists" aria-label="Total playlists">0</div>
                                     <div class="text-[10px] text-slate-400 uppercase tracking-wider mt-1">Playlists</div>
                                 </div>
                                 <div class="text-center">
-                                    <div class="text-2xl font-black text-green-300" id="tally-total-items">0</div>
+                                    <div class="text-2xl font-black text-green-300" id="tally-total-items" aria-label="Total tracks across all playlists">0</div>
                                     <div class="text-[10px] text-slate-400 uppercase tracking-wider mt-1">Total Tracks</div>
                                 </div>
                                 <div class="text-center">
-                                    <div class="text-2xl font-black text-purple-300" id="tally-current-items">0</div>
+                                    <div class="text-2xl font-black text-purple-300" id="tally-current-items" aria-label="Items in current playlist">0</div>
                                     <div class="text-[10px] text-slate-400 uppercase tracking-wider mt-1">Current List</div>
                                 </div>
                             </div>
@@ -3073,7 +3073,10 @@
             }
         }
         
-        // Toggle tally display
+        /**
+         * Toggle the visibility of the tally display panel
+         * Shows or hides playlist statistics and updates button text
+         */
         function toggleTallyDisplay() {
             const tallyDisplay = document.getElementById('tally-display');
             const tallyBtn = document.getElementById('tally-btn-text');
@@ -3089,8 +3092,16 @@
             }
         }
         
-        // Update tally display with current statistics
+        /**
+         * Update the tally display with current playlist statistics
+         * Only updates if the tally display is currently visible
+         * Calculates total playlists, total items, and current playlist items
+         */
         function updateTallyDisplay() {
+            const tallyDisplay = document.getElementById('tally-display');
+            // Only update if tally is visible (performance optimization)
+            if (!tallyDisplay || tallyDisplay.classList.contains('hidden')) return;
+            
             if (typeof MusicPlayer === 'undefined' || !MusicPlayer.getPlaylists) return;
             
             const playlists = MusicPlayer.getPlaylists();
